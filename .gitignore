@@ -1,0 +1,61 @@
+# Android
+*.iml
+.idea/
+gradle/
+build/
+local.properties
+*.jks
+*.keystore
+
+# Android Studio
+*.suo
+*.user
+*.userosscache
+*.sublime-workspace
+*.sublime-project
+
+# Kotlin
+*.kotlin_module
+
+# macOS
+.DS_Store
+
+# Local env files
+.env
+.env.local
+.env.*.local
+
+# Windows
+Thumbs.db
+
+# Linux
+*~
+
+# Local History for IntelliJ
+.localHistory/
+
+# Logs
+*.log
+
+# APKs and bundles
+*.apk
+*.ap_
+*.aab
+*.bundle
+
+# Emulator
+*.avd
+*.ini
+
+# SDK
+android-sdk/
+
+# NDK
+android-ndk/
+
+# Generated files
+app/src/main/generated/
+app/build/
+
+# Cache
+.cache/
