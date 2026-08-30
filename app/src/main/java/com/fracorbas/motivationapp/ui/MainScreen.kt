@@ -111,6 +111,7 @@ fun MainScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddHabitClick,
+                modifier = Modifier.padding(bottom = contentPadding.calculateBottomPadding()),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
                 elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 2.dp)
