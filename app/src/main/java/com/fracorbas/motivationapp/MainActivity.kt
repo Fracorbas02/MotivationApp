@@ -17,6 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import com.fracorbas.motivationapp.ui.AddHabitScreen
 import com.fracorbas.motivationapp.ui.AddTriggerScreen
 import com.fracorbas.motivationapp.ui.HabitDetailScreen
+import com.fracorbas.motivationapp.ui.HomeScreen
 import com.fracorbas.motivationapp.ui.MainScreen
 import com.fracorbas.motivationapp.ui.SettingsScreen
 import com.fracorbas.motivationapp.ui.StatisticsScreen
@@ -72,8 +73,16 @@ fun MotivationAppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "main"
+        startDestination = "home"
     ) {
+        composable("home") {
+            HomeScreen(
+                onHabitsClick = { navController.navigate("main") },
+                onStatisticsClick = { navController.navigate("statistics") },
+                onSettingsClick = { navController.navigate("settings") },
+                viewModel = habitViewModel
+            )
+        }
         composable("main") {
             MainScreen(
                 onAddHabitClick = { navController.navigate("addHabit") },
