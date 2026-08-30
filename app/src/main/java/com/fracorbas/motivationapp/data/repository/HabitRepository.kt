@@ -110,28 +110,10 @@ class HabitRepository @Inject constructor(
 
     /**
      * Compute the current streak (consecutive days ending today or yesterday)
-     * from a sorted list of completion dates.
+     * from a sorted list of completion dates. Delegates to [StreakUtils].
      */
-    private fun computeCurrentStreak(lastCompleted: LocalDate?, history: List<LocalDate>): Int {
-        if (history.isEmpty() || lastCompleted == null) return 0
-        val today = LocalDate.now()
-        // A streak is "live" if the most recent completion is today or yesterday.
-        if (lastCompleted != today && lastCompleted != today.minusDays(1)) return 0
-        var streak = 0
-        var expected = lastCompleted
-        // Walk backwards from the most recent completion.
-        for (i in history.indices.reversed()) {
-            if (history[i] == expected) {
-                streak++
-                expected = expected.minusDays(1)
-            } else if (history[i].isAfter(expected)) {
-                // skip duplicates / future (shouldn't happen with unique index)
-            } else {
-                break
-            }
-        }
-        return streak
-    }
+    private fun computeCurrentStreak(lastCompleted: LocalDate?, history: List<LocalDate>): Int =
+        com.fracorbas.motivationapp.data.model.StreakUtils.currentStreak(history)
 
     /**
      * Search habits by query
