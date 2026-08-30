@@ -6,8 +6,11 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -15,10 +18,12 @@ import com.fracorbas.motivationapp.ui.AddHabitScreen
 import com.fracorbas.motivationapp.ui.AddTriggerScreen
 import com.fracorbas.motivationapp.ui.HabitDetailScreen
 import com.fracorbas.motivationapp.ui.MainScreen
+import com.fracorbas.motivationapp.ui.SettingsScreen
 import com.fracorbas.motivationapp.ui.StatisticsScreen
 import com.fracorbas.motivationapp.ui.TriggersScreen
 import com.fracorbas.motivationapp.ui.theme.MotivationAppTheme
 import com.fracorbas.motivationapp.viewmodel.HabitViewModel
+import com.fracorbas.motivationapp.viewmodel.SettingsViewModel
 import com.fracorbas.motivationapp.viewmodel.StatisticsViewModel
 import com.fracorbas.motivationapp.viewmodel.TriggerViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -35,7 +40,13 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            MotivationAppTheme {
+            val settingsViewModel: SettingsViewModel = hiltViewModel()
+            val settings by settingsViewModel.settings.collectAsState()
+
+            MotivationAppTheme(
+                themeMode = settings.themeMode,
+                dynamicColor = settings.dynamicColor
+            ) {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -57,6 +68,7 @@ fun MotivationAppNavigation() {
     val habitViewModel: HabitViewModel = hiltViewModel()
     val triggerViewModel: TriggerViewModel = hiltViewModel()
     val statisticsViewModel: StatisticsViewModel = hiltViewModel()
+    val settingsViewModel: SettingsViewModel = hiltViewModel()
 
     NavHost(
         navController = navController,
@@ -72,6 +84,7 @@ fun MotivationAppNavigation() {
                     navController.navigate("addHabit/$habitId")
                 },
                 onStatisticsClick = { navController.navigate("statistics") },
+                onSettingsClick = { navController.navigate("settings") },
                 viewModel = habitViewModel
             )
         }
@@ -136,6 +149,14 @@ fun MotivationAppNavigation() {
             StatisticsScreen(
                 onBack = { navController.popBackStack() },
                 viewModel = statisticsViewModel
+            )
+        }
+
+        // Settings screen
+        composable("settings") {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                viewModel = settingsViewModel
             )
         }
     }

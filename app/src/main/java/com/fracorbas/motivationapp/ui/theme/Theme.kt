@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.fracorbas.motivationapp.data.repository.ThemeMode
 
 private val LightColorScheme = lightColorScheme(
     primary = CalmPrimary,
@@ -78,10 +79,15 @@ private val DarkColorScheme = darkColorScheme(
 
 @Composable
 fun MotivationAppTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    themeMode: ThemeMode = ThemeMode.SYSTEM,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
+    val darkTheme = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
@@ -110,3 +116,14 @@ fun MotivationAppTheme(
 @Composable
 fun successColor(): Color =
     if (isSystemInDarkTheme()) SuccessDark else Success
+
+/** Theme-aware success color honoring an explicit theme mode (for previews). */
+@Composable
+fun successColor(themeMode: ThemeMode): Color {
+    val dark = when (themeMode) {
+        ThemeMode.SYSTEM -> isSystemInDarkTheme()
+        ThemeMode.LIGHT -> false
+        ThemeMode.DARK -> true
+    }
+    return if (dark) SuccessDark else Success
+}

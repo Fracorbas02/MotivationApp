@@ -15,6 +15,7 @@ import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -64,6 +65,7 @@ fun MainScreen(
     onHabitClick: (Int) -> Unit,
     onEditHabitClick: (Int) -> Unit,
     onStatisticsClick: () -> Unit,
+    onSettingsClick: () -> Unit,
     viewModel: HabitViewModel = hiltViewModel()
 ) {
     val habits by viewModel.filteredHabits.collectAsState()
@@ -91,6 +93,9 @@ fun MainScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppTopBar(title = "Habitudes", actions = {
+                IconButton(onClick = onSettingsClick) {
+                    Icon(Icons.Default.Settings, contentDescription = "Réglages")
+                }
                 IconButton(onClick = onStatisticsClick) {
                     Icon(Icons.Default.Assessment, contentDescription = "Statistiques")
                 }
@@ -214,6 +219,7 @@ private fun MainScreenPreview() {
             onHabitClick = {},
             onEditHabitClick = {},
             onStatisticsClick = {},
+            onSettingsClick = {},
             viewModel = hiltViewModel()
         )
     }
