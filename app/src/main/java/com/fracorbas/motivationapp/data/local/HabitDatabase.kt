@@ -7,6 +7,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.fracorbas.motivationapp.data.model.Habit
+import com.fracorbas.motivationapp.data.model.HabitCompletion
 import com.fracorbas.motivationapp.data.model.LocalDateConverter
 import com.fracorbas.motivationapp.data.model.LocalTimeConverter
 import com.fracorbas.motivationapp.data.model.Trigger
@@ -21,14 +22,15 @@ import kotlinx.coroutines.launch
  * @property triggerDao Data Access Object for triggers
  */
 @Database(
-    entities = [Habit::class, Trigger::class],
-    version = 2,
+    entities = [Habit::class, Trigger::class, HabitCompletion::class],
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(LocalDateConverter::class, LocalTimeConverter::class)
 abstract class HabitDatabase : RoomDatabase() {
     abstract val habitDao: HabitDao
     abstract val triggerDao: TriggerDao
+    abstract val habitCompletionDao: HabitCompletionDao
 
     companion object {
         @Volatile
@@ -62,6 +64,34 @@ abstract class HabitDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create the habit completion history table.
+                // completedDate is stored as epoch-day (Long) via the LocalDate type converter.
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS habit_completions (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        habitId INTEGER NOT NULL,
+                        completedDate INTEGER NOT NULL,
+                        FOREIGN KEY(habitId) REFERENCES habits(id) ON DELETE CASCADE
+                    )
+                """)
+                database.execSQL("""
+                    CREATE UNIQUE INDEX IF NOT EXISTS
+                    index_habit_completions_habitId_completedDate
+                    ON habit_completions(habitId, completedDate)
+                """)
+
+                // Backfill: seed one completion row per habit that already has a
+                // lastCompletedDate, so existing progress is not lost.
+                database.execSQL("""
+                    INSERT OR IGNORE INTO habit_completions (habitId, completedDate)
+                    SELECT id, lastCompletedDate FROM habits
+                    WHERE lastCompletedDate IS NOT NULL
+                """)
+            }
+        }
+
         fun getDatabase(context: Context): HabitDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = androidx.room.Room.databaseBuilder(
@@ -69,7 +99,7 @@ abstract class HabitDatabase : RoomDatabase() {
                     HabitDatabase::class.java,
                     "motivation_app_db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)

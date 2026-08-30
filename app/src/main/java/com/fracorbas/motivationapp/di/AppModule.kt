@@ -46,12 +46,23 @@ object AppModule {
     fun provideTriggerDao(database: HabitDatabase) = database.triggerDao
 
     /**
+     * Provides the HabitCompletionDao from the database
+     */
+    @Provides
+    @Singleton
+    fun provideHabitCompletionDao(database: HabitDatabase) = database.habitCompletionDao
+
+    /**
      * Provides the HabitRepository
      */
     @Provides
     @Singleton
-    fun provideHabitRepository(habitDao: com.fracorbas.motivationapp.data.local.HabitDao): HabitRepository {
-        return HabitRepository(habitDao)
+    fun provideHabitRepository(
+        habitDao: com.fracorbas.motivationapp.data.local.HabitDao,
+        completionDao: com.fracorbas.motivationapp.data.local.HabitCompletionDao,
+        database: HabitDatabase
+    ): HabitRepository {
+        return HabitRepository(habitDao, completionDao, database)
     }
 
     /**

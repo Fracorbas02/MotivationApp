@@ -135,7 +135,8 @@ fun StatisticsScreen(
                 }
                 items(habits) { habit ->
                     val percentage = viewModel.getHabitCompletionPercentage(habit, startDate, today)
-                    HabitStatCard(habit = habit, percentage = percentage, startDate = startDate, endDate = today)
+                    val completions = viewModel.getHabitCompletionCount(habit, startDate, today)
+                    HabitStatCard(habit = habit, percentage = percentage, completions = completions, startDate = startDate, endDate = today)
                 }
             }
         }
@@ -213,13 +214,11 @@ private fun BarChart(stats: Map<LocalDate, Int>, modifier: Modifier = Modifier) 
 private fun HabitStatCard(
     habit: Habit,
     percentage: Double,
+    completions: Int,
     startDate: LocalDate,
     endDate: LocalDate
 ) {
     val daysInPeriod = ChronoUnit.DAYS.between(startDate, endDate) + 1
-    val completions = if (habit.lastCompletedDate != null &&
-        !habit.lastCompletedDate.isBefore(startDate) &&
-        !habit.lastCompletedDate.isAfter(endDate)) 1 else 0
 
     val progressColor = when {
         percentage >= 80 -> successColor()

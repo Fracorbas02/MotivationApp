@@ -29,7 +29,7 @@ class BootCompleteReceiver : BroadcastReceiver() {
 
         // Create dependencies manually (without Hilt)
         val database = HabitDatabase.getDatabase(context)
-        val habitRepository = HabitRepository(database.habitDao)
+        val habitRepository = HabitRepository(database.habitDao, database.habitCompletionDao, database)
         val alarmScheduler = com.fracorbas.motivationapp.notification.HabitAlarmScheduler(context)
 
         // Use a coroutine scope to launch async work

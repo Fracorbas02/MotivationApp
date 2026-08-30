@@ -60,3 +60,4 @@ app/schemas/
 
 # Cache
 .cache/
+.gradle/
