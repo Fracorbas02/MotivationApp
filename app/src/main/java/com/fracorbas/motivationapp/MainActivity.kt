@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.fracorbas.motivationapp.ui.AddHabitScreen
 import com.fracorbas.motivationapp.ui.AddTriggerScreen
+import com.fracorbas.motivationapp.ui.HabitDetailScreen
 import com.fracorbas.motivationapp.ui.MainScreen
 import com.fracorbas.motivationapp.ui.StatisticsScreen
 import com.fracorbas.motivationapp.ui.TriggersScreen
@@ -65,9 +66,21 @@ fun MotivationAppNavigation() {
             MainScreen(
                 onAddHabitClick = { navController.navigate("addHabit") },
                 onHabitClick = { habitId ->
+                    navController.navigate("habitDetail/$habitId")
+                },
+                onEditHabitClick = { habitId ->
                     navController.navigate("addHabit/$habitId")
                 },
                 onStatisticsClick = { navController.navigate("statistics") },
+                viewModel = habitViewModel
+            )
+        }
+        composable("habitDetail/{habitId}") { backStackEntry ->
+            val habitId = backStackEntry.arguments?.getString("habitId")?.toIntOrNull() ?: 0
+            HabitDetailScreen(
+                habitId = habitId,
+                onBack = { navController.popBackStack() },
+                onEditHabit = { id -> navController.navigate("addHabit/$id") },
                 viewModel = habitViewModel
             )
         }

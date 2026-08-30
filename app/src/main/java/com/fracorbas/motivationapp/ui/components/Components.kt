@@ -297,6 +297,7 @@ fun HabitRow(
     onEditClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onToggleNotification: (Boolean) -> Unit,
+    onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val isCompletedToday = habit.lastCompletedDate == LocalDate.now()
@@ -313,7 +314,9 @@ fun HabitRow(
     val meta = metaParts.joinToString("  ·  ")
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier),
         shape = cardShape,
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -446,7 +449,8 @@ fun HabitsLazyList(
     onToggleCompletion: (Int) -> Unit,
     onEditClick: (Int) -> Unit,
     onDeleteClick: (Habit) -> Unit,
-    onToggleNotification: (Int, Boolean) -> Unit
+    onToggleNotification: (Int, Boolean) -> Unit,
+    onHabitClick: ((Int) -> Unit)? = null
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
@@ -459,7 +463,8 @@ fun HabitsLazyList(
                 onToggleCompletion = { onToggleCompletion(habit.id) },
                 onEditClick = { onEditClick(habit.id) },
                 onDeleteClick = { onDeleteClick(habit) },
-                onToggleNotification = { onToggleNotification(habit.id, it) }
+                onToggleNotification = { onToggleNotification(habit.id, it) },
+                onClick = onHabitClick?.let { { it(habit.id) } }
             )
         }
     }

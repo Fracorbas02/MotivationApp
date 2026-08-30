@@ -292,6 +292,12 @@ class HabitViewModel @Inject constructor(
     suspend fun getHabitById(id: Int): Habit? = repository.getHabitById(id)
 
     /**
+     * All completion dates for a habit, oldest first (for the detail/history view).
+     */
+    suspend fun getCompletionsForHabit(id: Int): List<LocalDate> =
+        repository.getAllCompletionsForHabit(id)
+
+    /**
      * Request to add a new habit
      */
     fun onAddHabitClick() = viewModelScope.launch {

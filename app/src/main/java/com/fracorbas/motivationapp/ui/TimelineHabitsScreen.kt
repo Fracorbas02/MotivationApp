@@ -31,7 +31,8 @@ fun TimelineHabitsList(
     onToggleCompletion: (Int) -> Unit,
     onEditClick: (Int) -> Unit,
     onDeleteClick: (Habit) -> Unit,
-    onToggleNotification: (Int, Boolean) -> Unit
+    onToggleNotification: (Int, Boolean) -> Unit,
+    onHabitClick: ((Int) -> Unit)? = null
 ) {
     val grouped = remember(habits) {
         TimeOfDay.inOrder().associateWith { tod ->
@@ -56,7 +57,8 @@ fun TimelineHabitsList(
                         onToggleCompletion = { onToggleCompletion(habit.id) },
                         onEditClick = { onEditClick(habit.id) },
                         onDeleteClick = { onDeleteClick(habit) },
-                        onToggleNotification = { onToggleNotification(habit.id, it) }
+                        onToggleNotification = { onToggleNotification(habit.id, it) },
+                        onClick = onHabitClick?.let { { it(habit.id) } }
                     )
                 }
                 item { Spacer(modifier = Modifier.height(4.dp)) }

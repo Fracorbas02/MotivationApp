@@ -62,6 +62,7 @@ enum class HabitViewMode { LIST, TIMELINE }
 fun MainScreen(
     onAddHabitClick: () -> Unit,
     onHabitClick: (Int) -> Unit,
+    onEditHabitClick: (Int) -> Unit,
     onStatisticsClick: () -> Unit,
     viewModel: HabitViewModel = hiltViewModel()
 ) {
@@ -185,16 +186,18 @@ fun MainScreen(
                     HabitViewMode.LIST -> HabitsLazyList(
                         habits = habits,
                         onToggleCompletion = { viewModel.toggleHabitCompletion(it) },
-                        onEditClick = onHabitClick,
+                        onEditClick = onEditHabitClick,
                         onDeleteClick = { viewModel.deleteHabit(it) },
-                        onToggleNotification = { id, enabled -> viewModel.toggleNotification(id, enabled) }
+                        onToggleNotification = { id, enabled -> viewModel.toggleNotification(id, enabled) },
+                        onHabitClick = onHabitClick
                     )
                     HabitViewMode.TIMELINE -> TimelineHabitsList(
                         habits = habits,
                         onToggleCompletion = { viewModel.toggleHabitCompletion(it) },
-                        onEditClick = onHabitClick,
+                        onEditClick = onEditHabitClick,
                         onDeleteClick = { viewModel.deleteHabit(it) },
-                        onToggleNotification = { id, enabled -> viewModel.toggleNotification(id, enabled) }
+                        onToggleNotification = { id, enabled -> viewModel.toggleNotification(id, enabled) },
+                        onHabitClick = onHabitClick
                     )
                 }
             }
@@ -209,6 +212,7 @@ private fun MainScreenPreview() {
         MainScreen(
             onAddHabitClick = {},
             onHabitClick = {},
+            onEditHabitClick = {},
             onStatisticsClick = {},
             viewModel = hiltViewModel()
         )
