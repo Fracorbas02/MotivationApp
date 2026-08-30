@@ -52,6 +52,18 @@ interface TriggerDao {
     suspend fun insertTrigger(trigger: Trigger): Long
 
     /**
+     * Bulk insert triggers (used by backup import).
+     */
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTriggers(triggers: List<Trigger>)
+
+    /**
+     * Delete all triggers (used by backup import).
+     */
+    @Query("DELETE FROM triggers")
+    suspend fun deleteAllTriggers()
+
+    /**
      * Update an existing trigger
      */
     @Update

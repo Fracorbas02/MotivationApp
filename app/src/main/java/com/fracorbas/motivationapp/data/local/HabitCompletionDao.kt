@@ -22,6 +22,12 @@ interface HabitCompletionDao {
     suspend fun insertCompletion(completion: HabitCompletion): Long
 
     /**
+     * Bulk insert completion records (used by backup import).
+     */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertCompletions(completions: List<HabitCompletion>)
+
+    /**
      * Remove a completion record (used when undoing today's completion).
      */
     @Query("""
@@ -102,6 +108,18 @@ interface HabitCompletionDao {
      */
     @Query("SELECT * FROM habit_completions ORDER BY completedDate DESC")
     fun observeAllCompletions(): Flow<List<HabitCompletion>>
+
+    /**
+     * All completion records (non-Flow, for backup export).
+     */
+    @Query("SELECT * FROM habit_completions ORDER BY completedDate ASC")
+    suspend fun getAllCompletionsList(): List<HabitCompletion>
+
+    /**
+     * Delete all completion records (used by backup import).
+     */
+    @Query("DELETE FROM habit_completions")
+    suspend fun deleteAllCompletions()
 }
 
 /** Aggregate row: a date and how many habits were completed on it. */

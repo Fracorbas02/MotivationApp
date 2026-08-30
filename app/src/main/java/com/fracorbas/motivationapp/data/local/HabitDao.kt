@@ -121,10 +121,16 @@ interface HabitDao {
      * (non-Flow version for one-time queries like after boot)
      */
     @Query("""
-        SELECT * FROM habits 
-        WHERE notificationEnabled = 1 
+        SELECT * FROM habits
+        WHERE notificationEnabled = 1
         AND reminderTime IS NOT NULL
         AND isActive = 1
     """)
     suspend fun getAllActiveHabitsWithReminders(): List<Habit>
+
+    /**
+     * Delete all habits (used by backup import).
+     */
+    @Query("DELETE FROM habits")
+    suspend fun deleteAllHabits()
 }
