@@ -13,9 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -64,9 +62,8 @@ fun MainScreen(
     onAddHabitClick: () -> Unit,
     onHabitClick: (Int) -> Unit,
     onEditHabitClick: (Int) -> Unit,
-    onStatisticsClick: () -> Unit,
-    onSettingsClick: () -> Unit,
-    viewModel: HabitViewModel = hiltViewModel()
+    viewModel: HabitViewModel = hiltViewModel(),
+    contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)
 ) {
     val habits by viewModel.filteredHabits.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
@@ -93,12 +90,6 @@ fun MainScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             AppTopBar(title = "Habitudes", actions = {
-                IconButton(onClick = onSettingsClick) {
-                    Icon(Icons.Default.Settings, contentDescription = "Réglages")
-                }
-                IconButton(onClick = onStatisticsClick) {
-                    Icon(Icons.Default.Assessment, contentDescription = "Statistiques")
-                }
                 SingleChoiceSegmentedButtonRow {
                     SegmentedButton(
                         selected = viewMode == HabitViewMode.LIST,
@@ -132,6 +123,7 @@ fun MainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(contentPadding)
                 .padding(horizontal = 16.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -218,8 +210,6 @@ private fun MainScreenPreview() {
             onAddHabitClick = {},
             onHabitClick = {},
             onEditHabitClick = {},
-            onStatisticsClick = {},
-            onSettingsClick = {},
             viewModel = hiltViewModel()
         )
     }

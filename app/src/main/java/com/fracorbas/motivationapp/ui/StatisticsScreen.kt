@@ -55,8 +55,8 @@ import java.time.temporal.ChronoUnit
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatisticsScreen(
-    onBack: () -> Unit,
-    viewModel: StatisticsViewModel = hiltViewModel()
+    viewModel: StatisticsViewModel = hiltViewModel(),
+    contentPadding: androidx.compose.foundation.layout.PaddingValues = androidx.compose.foundation.layout.PaddingValues(0.dp)
 ) {
     val habits by viewModel.allHabits.collectAsState()
     val summary by viewModel.summary.collectAsState()
@@ -65,12 +65,13 @@ fun StatisticsScreen(
     val selectedPeriod by viewModel.selectedPeriod.collectAsState()
 
     Scaffold(
-        topBar = { AppTopBar("Statistiques", onBack) }
+        topBar = { AppTopBar("Statistiques") }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(padding)
+                .padding(contentPadding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -262,6 +263,6 @@ private fun HabitStatCard(stat: HabitStat) {
 @Composable
 private fun StatisticsScreenPreview() {
     MotivationAppTheme {
-        StatisticsScreen(onBack = {})
+        StatisticsScreen()
     }
 }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,19 +16,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
-import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +38,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.tooling.preview.Preview
 import com.fracorbas.motivationapp.data.model.AtomicHabitsQuotes
 import com.fracorbas.motivationapp.ui.components.AppTopBar
-import com.fracorbas.motivationapp.ui.components.SectionLabel
 import com.fracorbas.motivationapp.ui.theme.MotivationAppTheme
 import com.fracorbas.motivationapp.ui.theme.successColor
 import com.fracorbas.motivationapp.viewmodel.HabitViewModel
@@ -52,10 +46,9 @@ import java.time.LocalDate
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onHabitsClick: () -> Unit,
-    onStatisticsClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    viewModel: HabitViewModel = hiltViewModel()
+    viewModel: HabitViewModel = hiltViewModel(),
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val todayCompleted by viewModel.todayCompletedCount.collectAsState()
     val activeCount by viewModel.activeHabitsCount.collectAsState()
@@ -80,6 +73,7 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .padding(contentPadding)
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -176,35 +170,7 @@ fun HomeScreen(
                 }
             }
 
-            // Quick actions
-            item {
-                SectionLabel("Raccourcis")
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedButton(
-                        onClick = onHabitsClick,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.FormatListBulleted, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Habitudes")
-                    }
-                    OutlinedButton(
-                        onClick = onStatisticsClick,
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(14.dp)
-                    ) {
-                        Icon(Icons.Default.Assessment, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Stats")
-                    }
-                }
-                Spacer(Modifier.height(24.dp))
-            }
+            item { Spacer(Modifier.height(24.dp)) }
         }
     }
 }
@@ -213,6 +179,6 @@ fun HomeScreen(
 @Composable
 private fun HomeScreenPreview() {
     MotivationAppTheme {
-        HomeScreen(onHabitsClick = {}, onStatisticsClick = {}, onSettingsClick = {})
+        HomeScreen(onSettingsClick = {})
     }
 }
