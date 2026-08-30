@@ -1,0 +1,209 @@
+package com.fracorbas.motivationapp.notification
+
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import dagger.hilt.android.qualifiers.ApplicationContext
+import java.time.LocalTime
+import java.util.Calendar
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Schedules exact alarms for habit reminders using AlarmManager.
+ * 
+ * This provides precise notifications at the exact time specified by the user,
+ * even when the app is closed or the device has rebooted (with BootCompleteReceiver).
+ */
+@Singleton
+class HabitAlarmScheduler @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+    /**
+     * Schedule a reminder for a specific habit.
+     * The alarm will trigger at the habit's reminder time with optional frequency.
+     * 
+     * @param habitId The ID of the habit
+     * @param title The habit title for the notification
+     * @param trigger The habit trigger text
+     * @param reminderTime The exact time to trigger the notification
+     * @param frequency Optional frequency (e.g., 2 for every 2 days)
+     * @param frequencyUnit Optional frequency unit (e.g., "days", "weeks")
+     */
+    fun scheduleHabitReminder(
+        habitId: Int,
+        title: String,
+        trigger: String,
+        reminderTime: LocalTime,
+        frequency: Int? = null,
+        frequencyUnit: String? = null
+    ) {
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, reminderTime.hour)
+            set(Calendar.MINUTE, reminderTime.minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        // If the time has already passed today, schedule for the next occurrence based on frequency
+        val triggerTime = calculateNextTriggerTime(calendar, frequency, frequencyUnit)
+
+        createAlarm(habitId, title, trigger, triggerTime, frequency, frequencyUnit)
+    }
+
+    /**
+     * Calculate the next trigger time based on frequency settings
+     */
+    private fun calculateNextTriggerTime(
+        calendar: Calendar,
+        frequency: Int?,
+        frequencyUnit: String?
+    ): Long {
+        val now = System.currentTimeMillis()
+        
+        if (calendar.timeInMillis > now) {
+            // Time hasn't passed yet, use it as is
+            return calendar.timeInMillis
+        }
+        
+        // Time has passed, schedule for next occurrence
+        when (frequencyUnit) {
+            "weeks" -> {
+                val frequencyValue = frequency ?: 1
+                calendar.add(Calendar.WEEK_OF_YEAR, frequencyValue)
+            }
+            "months" -> {
+                val frequencyValue = frequency ?: 1
+                calendar.add(Calendar.MONTH, frequencyValue)
+            }
+            else -> {
+                // Default to days (or daily if frequency is null/1)
+                calendar.add(Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+        
+        return calendar.timeInMillis
+    }
+
+    /**
+     * Cancel the reminder for a specific habit.
+     * 
+     * @param habitId The ID of the habit
+     */
+    fun cancelHabitReminder(habitId: Int) {
+        val intent = createAlarmIntent(habitId, "", "")
+        val pendingIntent = getPendingIntent(habitId, intent)
+        pendingIntent?.let { alarmManager.cancel(it) }
+    }
+
+    /**
+     * Reschedule all alarms for the given habits.
+     * Used after device reboot or when restoring habits.
+     * 
+     * @param habits List of habits with reminder times
+     */
+    fun rescheduleAllAlarms(habits: List<com.fracorbas.motivationapp.data.model.Habit>) {
+        habits.filter { it.notificationEnabled && it.reminderTime != null }
+            .forEach { habit ->
+                scheduleHabitReminder(
+                    habitId = habit.id,
+                    title = habit.title,
+                    trigger = habit.trigger,
+                    reminderTime = habit.reminderTime!!
+                )
+            }
+    }
+
+    /**
+     * Update an existing habit reminder with new time.
+     * Cancels the old alarm and creates a new one.
+     */
+    fun updateHabitReminder(
+        habitId: Int,
+        title: String,
+        trigger: String,
+        oldReminderTime: LocalTime?,
+        newReminderTime: LocalTime
+    ) {
+        // Cancel old alarm if it exists
+        oldReminderTime?.let { cancelHabitReminder(habitId) }
+        
+        // Schedule new alarm
+        scheduleHabitReminder(habitId, title, trigger, newReminderTime)
+    }
+
+    /**
+     * Check if an alarm is already scheduled for a habit.
+     */
+    fun isAlarmScheduled(habitId: Int): Boolean {
+        val intent = createAlarmIntent(habitId, "", "")
+        return getPendingIntent(habitId, intent) != null
+    }
+
+    // ========== Private helpers ==========
+
+    private fun createAlarmIntent(
+        habitId: Int,
+        title: String,
+        trigger: String,
+        frequency: Int? = null,
+        frequencyUnit: String? = null
+    ): Intent {
+        return Intent(context, HabitReminderReceiver::class.java).apply {
+            putExtra(HabitReminderReceiver.EXTRA_HABIT_ID, habitId)
+            putExtra(HabitReminderReceiver.EXTRA_HABIT_TITLE, title)
+            putExtra(HabitReminderReceiver.EXTRA_HABIT_TRIGGER, trigger)
+            putExtra(HabitReminderReceiver.EXTRA_HABIT_FREQUENCY, frequency)
+            putExtra(HabitReminderReceiver.EXTRA_HABIT_FREQUENCY_UNIT, frequencyUnit)
+        }
+    }
+
+    private fun getPendingIntent(
+        habitId: Int,
+        intent: Intent
+    ): PendingIntent? {
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_UPDATE_CURRENT
+        }
+        
+        return try {
+            PendingIntent.getBroadcast(context, habitId, intent, flags)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun createAlarm(
+        habitId: Int,
+        title: String,
+        trigger: String,
+        triggerTime: Long,
+        frequency: Int? = null,
+        frequencyUnit: String? = null
+    ) {
+        val intent = createAlarmIntent(habitId, title, trigger, frequency, frequencyUnit)
+        val pendingIntent = getPendingIntent(habitId, intent) ?: return
+        
+        // Use setExactAndAllowWhileIdle for precise alarms that work even in Doze mode
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(
+                AlarmManager.RTC_WAKEUP,
+                triggerTime,
+                pendingIntent
+            )
+        } else {
+            // Fallback for older versions
+            alarmManager.setExact(
+                AlarmManager.RTC_WAKEUP,
+                triggerTime,
+                pendingIntent
+            )
+        }
+    }
+}

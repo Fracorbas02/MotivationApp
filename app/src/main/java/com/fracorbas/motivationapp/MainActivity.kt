@@ -12,10 +12,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.fracorbas.motivationapp.ui.AddHabitScreen
-import com.fracorbas.motivationapp.ui.HabitListScreen
+import com.fracorbas.motivationapp.ui.AddTriggerScreen
 import com.fracorbas.motivationapp.ui.MainScreen
+import com.fracorbas.motivationapp.ui.StatisticsScreen
+import com.fracorbas.motivationapp.ui.TriggersScreen
 import com.fracorbas.motivationapp.ui.theme.MotivationAppTheme
 import com.fracorbas.motivationapp.viewmodel.HabitViewModel
+import com.fracorbas.motivationapp.viewmodel.StatisticsViewModel
+import com.fracorbas.motivationapp.viewmodel.TriggerViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -49,7 +53,9 @@ class MainActivity : ComponentActivity() {
 @androidx.compose.runtime.Composable
 fun MotivationAppNavigation() {
     val navController = rememberNavController()
-    val viewModel: HabitViewModel = hiltViewModel()
+    val habitViewModel: HabitViewModel = hiltViewModel()
+    val triggerViewModel: TriggerViewModel = hiltViewModel()
+    val statisticsViewModel: StatisticsViewModel = hiltViewModel()
 
     NavHost(
         navController = navController,
@@ -61,13 +67,16 @@ fun MotivationAppNavigation() {
                 onHabitClick = { habitId ->
                     navController.navigate("addHabit/$habitId")
                 },
-                viewModel = viewModel
+                onStatisticsClick = { navController.navigate("statistics") },
+                viewModel = habitViewModel
             )
         }
         composable("addHabit") {
             AddHabitScreen(
                 onBack = { navController.popBackStack() },
-                viewModel = viewModel
+                onManageTriggers = { navController.navigate("triggers") },
+                habitViewModel = habitViewModel,
+                triggerViewModel = triggerViewModel
             )
         }
         composable("addHabit/{habitId}") { backStackEntry ->
@@ -75,7 +84,45 @@ fun MotivationAppNavigation() {
             AddHabitScreen(
                 habitId = habitId,
                 onBack = { navController.popBackStack() },
-                viewModel = viewModel
+                onManageTriggers = { navController.navigate("triggers") },
+                habitViewModel = habitViewModel,
+                triggerViewModel = triggerViewModel
+            )
+        }
+        
+        // Triggers management screens
+        composable("triggers") {
+            TriggersScreen(
+                onBack = { navController.popBackStack() },
+                onAddTriggerClick = { navController.navigate("addTrigger") },
+                onEditTriggerClick = { triggerId ->
+                    navController.navigate("addTrigger/$triggerId")
+                },
+                viewModel = triggerViewModel
+            )
+        }
+        
+        composable("addTrigger") {
+            AddTriggerScreen(
+                onBack = { navController.popBackStack() },
+                viewModel = triggerViewModel
+            )
+        }
+        
+        composable("addTrigger/{triggerId}") { backStackEntry ->
+            val triggerId = backStackEntry.arguments?.getString("triggerId")?.toIntOrNull()
+            AddTriggerScreen(
+                triggerId = triggerId,
+                onBack = { navController.popBackStack() },
+                viewModel = triggerViewModel
+            )
+        }
+        
+        // Statistics screen
+        composable("statistics") {
+            StatisticsScreen(
+                onBack = { navController.popBackStack() },
+                viewModel = statisticsViewModel
             )
         }
     }

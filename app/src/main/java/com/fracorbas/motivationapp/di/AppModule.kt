@@ -1,9 +1,11 @@
 package com.fracorbas.motivationapp.di
 
 import android.content.Context
+import androidx.core.app.NotificationManagerCompat
 import androidx.room.Room
 import com.fracorbas.motivationapp.data.local.HabitDatabase
 import com.fracorbas.motivationapp.data.repository.HabitRepository
+import com.fracorbas.motivationapp.data.repository.TriggerRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -26,11 +28,7 @@ object AppModule {
     fun provideHabitDatabase(
         @ApplicationContext context: Context
     ): HabitDatabase {
-        return Room.databaseBuilder(
-            context,
-            HabitDatabase::class.java,
-            "motivation_app_db"
-        ).build()
+        return HabitDatabase.getDatabase(context)
     }
 
     /**
@@ -41,11 +39,38 @@ object AppModule {
     fun provideHabitDao(database: HabitDatabase) = database.habitDao
 
     /**
+     * Provides the TriggerDao from the database
+     */
+    @Provides
+    @Singleton
+    fun provideTriggerDao(database: HabitDatabase) = database.triggerDao
+
+    /**
      * Provides the HabitRepository
      */
     @Provides
     @Singleton
     fun provideHabitRepository(habitDao: com.fracorbas.motivationapp.data.local.HabitDao): HabitRepository {
         return HabitRepository(habitDao)
+    }
+
+    /**
+     * Provides the TriggerRepository
+     */
+    @Provides
+    @Singleton
+    fun provideTriggerRepository(triggerDao: com.fracorbas.motivationapp.data.local.TriggerDao): TriggerRepository {
+        return TriggerRepository(triggerDao)
+    }
+
+    /**
+     * Provides the NotificationManagerCompat
+     */
+    @Provides
+    @Singleton
+    fun provideNotificationManagerCompat(
+        @ApplicationContext context: Context
+    ): NotificationManagerCompat {
+        return NotificationManagerCompat.from(context)
     }
 }

@@ -24,8 +24,8 @@ class MotivationApp : Application(), Configuration.Provider {
     @Inject
     lateinit var workerFactory: HiltWorkerFactory
 
-    override fun getWorkManagerConfiguration() = 
-        Configuration.Builder()
+    override val workManagerConfiguration: Configuration
+        get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .build()
 
@@ -45,8 +45,7 @@ class MotivationApp : Application(), Configuration.Provider {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Notifications for habit reminders"
-                enableVibration = true
-                enableLights = true
+                setShowBadge(true)
             }
 
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) 

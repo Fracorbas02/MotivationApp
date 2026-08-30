@@ -109,4 +109,22 @@ interface HabitDao {
         ORDER BY createdAt DESC
     """)
     fun searchHabits(query: String): Flow<List<Habit>>
+
+    /**
+     * Get all habits as a list (non-Flow version for one-time queries)
+     */
+    @Query("SELECT * FROM habits")
+    suspend fun getAllHabitsList(): List<Habit>
+
+    /**
+     * Get all active habits with notifications enabled and reminder time set
+     * (non-Flow version for one-time queries like after boot)
+     */
+    @Query("""
+        SELECT * FROM habits 
+        WHERE notificationEnabled = 1 
+        AND reminderTime IS NOT NULL
+        AND isActive = 1
+    """)
+    suspend fun getAllActiveHabitsWithReminders(): List<Habit>
 }

@@ -37,8 +37,16 @@ import javax.inject.Inject
  */
 @HiltViewModel
 class HabitViewModel @Inject constructor(
-    private val repository: HabitRepository
+    private val repository: HabitRepository,
+    private val alarmScheduler: com.fracorbas.motivationapp.notification.HabitAlarmScheduler
 ) : ViewModel() {
+
+    init {
+        // Reset habits that should be reset today (based on frequency)
+        viewModelScope.launch {
+            repository.resetHabitsForNewDay()
+        }
+    }
 
     // ==================== State ====================
 
@@ -136,17 +144,36 @@ class HabitViewModel @Inject constructor(
         title: String,
         description: String?,
         trigger: String,
+        triggerId: Int? = null,
         reminderTime: LocalTime?,
-        notificationEnabled: Boolean
+        notificationEnabled: Boolean,
+        notificationFrequency: Int? = null,
+        notificationFrequencyUnit: String? = null
     ) = viewModelScope.launch {
         val habit = Habit(
             title = title,
             description = description,
             trigger = trigger,
+            triggerId = triggerId,
             reminderTime = reminderTime,
-            notificationEnabled = notificationEnabled
+            notificationEnabled = notificationEnabled,
+            notificationFrequency = notificationFrequency,
+            notificationFrequencyUnit = notificationFrequencyUnit
         )
-        repository.createHabit(habit)
+        val habitId = repository.createHabit(habit)
+        
+        // Schedule alarm if notification is enabled and reminder time is set
+        if (notificationEnabled && reminderTime != null) {
+            alarmScheduler.scheduleHabitReminder(
+                habitId = habitId.toInt(),
+                title = title,
+                trigger = trigger,
+                reminderTime = reminderTime,
+                frequency = notificationFrequency,
+                frequencyUnit = notificationFrequencyUnit
+            )
+        }
+        
         _uiEvent.emit(UiEvent.ShowSnackbar("Habitude créée avec succès !"))
         _uiEvent.emit(UiEvent.NavigateBack)
     }
@@ -159,19 +186,52 @@ class HabitViewModel @Inject constructor(
         title: String,
         description: String?,
         trigger: String,
+        triggerId: Int? = null,
         reminderTime: LocalTime?,
         notificationEnabled: Boolean,
-        isActive: Boolean
+        isActive: Boolean,
+        notificationFrequency: Int? = null,
+        notificationFrequencyUnit: String? = null
     ) = viewModelScope.launch {
-        val habit = repository.getHabitById(id) ?: return@launch
+        val oldHabit = repository.getHabitById(id) ?: return@launch
+        
+        // Schedule/cancel alarm based on changes
+        if (oldHabit.notificationEnabled != notificationEnabled || 
+            oldHabit.reminderTime != reminderTime ||
+            oldHabit.title != title ||
+            oldHabit.trigger != trigger ||
+            oldHabit.notificationFrequency != notificationFrequency ||
+            oldHabit.notificationFrequencyUnit != notificationFrequencyUnit) {
+            
+            // Cancel old alarm if it was scheduled
+            if (oldHabit.notificationEnabled && oldHabit.reminderTime != null) {
+                alarmScheduler.cancelHabitReminder(oldHabit.id)
+            }
+            
+            // Schedule new alarm if notification is enabled and reminder time is set
+            if (notificationEnabled && reminderTime != null) {
+                alarmScheduler.scheduleHabitReminder(
+                    habitId = id,
+                    title = title,
+                    trigger = trigger,
+                    reminderTime = reminderTime,
+                    frequency = notificationFrequency,
+                    frequencyUnit = notificationFrequencyUnit
+                )
+            }
+        }
+        
         repository.updateHabit(
-            habit.copy(
+            oldHabit.copy(
                 title = title,
                 description = description,
                 trigger = trigger,
+                triggerId = triggerId,
                 reminderTime = reminderTime,
                 notificationEnabled = notificationEnabled,
-                isActive = isActive
+                isActive = isActive,
+                notificationFrequency = notificationFrequency,
+                notificationFrequencyUnit = notificationFrequencyUnit
             )
         )
         _uiEvent.emit(UiEvent.ShowSnackbar("Habitude mise à jour !"))
@@ -182,6 +242,10 @@ class HabitViewModel @Inject constructor(
      * Delete a habit
      */
     fun deleteHabit(habit: Habit) = viewModelScope.launch {
+        // Cancel alarm if it was scheduled
+        if (habit.notificationEnabled && habit.reminderTime != null) {
+            alarmScheduler.cancelHabitReminder(habit.id)
+        }
         repository.deleteHabit(habit)
         _uiEvent.emit(UiEvent.ShowSnackbar("Habitude supprimée"))
     }
@@ -204,7 +268,22 @@ class HabitViewModel @Inject constructor(
      * Toggle notification for a habit
      */
     fun toggleNotification(habitId: Int, enabled: Boolean) = viewModelScope.launch {
+        val habit = repository.getHabitById(habitId) ?: return@launch
+        
+        // Update notification setting
         repository.setNotificationEnabled(habitId, enabled)
+        
+        // Schedule or cancel alarm based on the new setting
+        if (enabled && habit.reminderTime != null) {
+            alarmScheduler.scheduleHabitReminder(
+                habitId = habitId,
+                title = habit.title,
+                trigger = habit.trigger,
+                reminderTime = habit.reminderTime!!
+            )
+        } else if (!enabled && habit.reminderTime != null) {
+            alarmScheduler.cancelHabitReminder(habitId)
+        }
     }
 
     /**

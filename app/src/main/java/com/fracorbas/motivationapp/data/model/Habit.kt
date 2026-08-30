@@ -25,13 +25,16 @@ data class Habit(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val title: String,
     val description: String? = null,
-    val trigger: String, // e.g., "After I brush my teeth"
+    val trigger: String, // e.g., "After I brush my teeth" - kept for backward compatibility
+    val triggerId: Int? = null, // Reference to Trigger entity
     val reminderTime: LocalTime? = null,
     val isActive: Boolean = true,
     val createdAt: LocalDate = LocalDate.now(),
     val streak: Int = 0,
     val lastCompletedDate: LocalDate? = null,
-    val notificationEnabled: Boolean = false
+    val notificationEnabled: Boolean = false,
+    val notificationFrequency: Int? = null, // e.g., 1 for daily, 2 for every 2 days, 7 for weekly
+    val notificationFrequencyUnit: String? = null // "days", "weeks", "months"
 )
 
 /**

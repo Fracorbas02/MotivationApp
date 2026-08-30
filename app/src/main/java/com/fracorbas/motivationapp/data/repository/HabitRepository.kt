@@ -95,6 +95,13 @@ class HabitRepository @Inject constructor(
     fun getHabitsWithNotifications(): Flow<List<Habit>> = habitDao.getHabitsWithNotifications()
 
     /**
+     * Get all active habits with notifications enabled and reminder time set
+     * (non-Flow version for one-time queries like after boot)
+     */
+    suspend fun getAllActiveHabitsWithReminders(): List<Habit> = 
+        habitDao.getAllActiveHabitsWithReminders()
+
+    /**
      * Get today's completed habits
      */
     fun getTodayCompletedHabits(): Flow<List<Habit>> = 
@@ -114,5 +121,65 @@ class HabitRepository @Inject constructor(
     suspend fun toggleHabitActive(habitId: Int) {
         val habit = habitDao.getHabitById(habitId) ?: return
         habitDao.updateHabit(habit.copy(isActive = !habit.isActive))
+    }
+
+    /**
+     * Reset habits that should be reset today based on their frequency.
+     * Called at app startup to reset daily habits.
+     */
+    suspend fun resetHabitsForNewDay() {
+        val today = java.time.LocalDate.now()
+        val habits = habitDao.getAllHabitsList()
+        
+        habits.forEach { habit ->
+            // Skip if already completed today or not active
+            if (habit.lastCompletedDate == today || !habit.isActive) {
+                return@forEach
+            }
+            
+            val lastCompleted = habit.lastCompletedDate ?: return@forEach
+            val frequency = habit.notificationFrequency ?: 1
+            val unit = habit.notificationFrequencyUnit ?: "days"
+            
+            val shouldReset = when (unit) {
+                "days" -> {
+                    val daysSince = java.time.temporal.ChronoUnit.DAYS.between(lastCompleted, today)
+                    daysSince >= frequency
+                }
+                "weeks" -> {
+                    val daysSince = java.time.temporal.ChronoUnit.DAYS.between(lastCompleted, today)
+                    daysSince >= frequency * 7L
+                }
+                "months" -> {
+                    val lastMonthStart = lastCompleted.withDayOfMonth(1)
+                    val currentMonthStart = today.withDayOfMonth(1)
+                    val monthsBetween = java.time.temporal.ChronoUnit.MONTHS.between(lastMonthStart, currentMonthStart)
+                    monthsBetween >= frequency
+                }
+                else -> true // Default to daily reset
+            }
+            
+            if (shouldReset) {
+                // Reset the habit
+                habitDao.updateHabit(
+                    habit.copy(
+                        lastCompletedDate = null,
+                        streak = 0
+                    )
+                )
+            }
+        }
+    }
+
+    /**
+     * Get all habits as a list (non-Flow version)
+     */
+    suspend fun getAllHabitsList(): List<Habit> = habitDao.getAllHabitsList()
+
+    /**
+     * Check if a habit should be reset today based on its frequency
+     */
+    fun shouldResetHabitToday(habit: Habit): Boolean {
+        return com.fracorbas.motivationapp.data.model.HabitFrequencyUtils.shouldResetHabitToday(habit)
     }
 }
