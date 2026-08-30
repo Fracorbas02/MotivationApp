@@ -257,4 +257,11 @@ class HabitRepository @Inject constructor(
      */
     suspend fun getAllCompletionsForHabit(habitId: Int): List<LocalDate> =
         completionDao.getAllCompletionsForHabit(habitId)
+
+    /**
+     * Reactive stream of all completion records (newest first), so ViewModels can
+     * recompute statistics without blocking the UI thread.
+     */
+    fun observeAllCompletions(): Flow<List<HabitCompletion>> =
+        completionDao.observeAllCompletions()
 }

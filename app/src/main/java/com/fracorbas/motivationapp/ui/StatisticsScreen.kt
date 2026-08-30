@@ -29,9 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,13 +44,13 @@ import com.fracorbas.motivationapp.ui.components.SectionLabel
 import com.fracorbas.motivationapp.ui.components.StatTile
 import com.fracorbas.motivationapp.ui.theme.MotivationAppTheme
 import com.fracorbas.motivationapp.ui.theme.successColor
+import com.fracorbas.motivationapp.viewmodel.HabitStat
+import com.fracorbas.motivationapp.viewmodel.StatisticsPeriod
 import com.fracorbas.motivationapp.viewmodel.StatisticsSummary
 import com.fracorbas.motivationapp.viewmodel.StatisticsViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-
-enum class StatisticsPeriod { WEEKLY, MONTHLY, YEARLY }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,15 +59,10 @@ fun StatisticsScreen(
     viewModel: StatisticsViewModel = hiltViewModel()
 ) {
     val habits by viewModel.allHabits.collectAsState()
-    var selectedPeriod by remember { mutableStateOf(StatisticsPeriod.WEEKLY) }
-
-    val today = LocalDate.now()
-    val stats = when (selectedPeriod) {
-        StatisticsPeriod.WEEKLY -> viewModel.getWeeklyStats(habits)
-        StatisticsPeriod.MONTHLY -> viewModel.getMonthlyStats(habits)
-        StatisticsPeriod.YEARLY -> viewModel.getYearlyStats(habits)
-    }
-    val summary = viewModel.getStatisticsSummary(habits)
+    val summary by viewModel.summary.collectAsState()
+    val stats by viewModel.periodStats.collectAsState()
+    val habitStats by viewModel.habitStats.collectAsState()
+    val selectedPeriod by viewModel.selectedPeriod.collectAsState()
 
     Scaffold(
         topBar = { AppTopBar("Statistiques", onBack) }
@@ -90,17 +82,17 @@ fun StatisticsScreen(
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
                         selected = selectedPeriod == StatisticsPeriod.WEEKLY,
-                        onClick = { selectedPeriod = StatisticsPeriod.WEEKLY },
+                        onClick = { viewModel.setPeriod(StatisticsPeriod.WEEKLY) },
                         shape = RoundedCornerShape(10.dp)
                     ) { Text("Semaine") }
                     SegmentedButton(
                         selected = selectedPeriod == StatisticsPeriod.MONTHLY,
-                        onClick = { selectedPeriod = StatisticsPeriod.MONTHLY },
+                        onClick = { viewModel.setPeriod(StatisticsPeriod.MONTHLY) },
                         shape = RoundedCornerShape(10.dp)
                     ) { Text("Mois") }
                     SegmentedButton(
                         selected = selectedPeriod == StatisticsPeriod.YEARLY,
-                        onClick = { selectedPeriod = StatisticsPeriod.YEARLY },
+                        onClick = { viewModel.setPeriod(StatisticsPeriod.YEARLY) },
                         shape = RoundedCornerShape(10.dp)
                     ) { Text("Année") }
                 }
@@ -128,15 +120,8 @@ fun StatisticsScreen(
                     )
                 }
             } else {
-                val startDate = when (selectedPeriod) {
-                    StatisticsPeriod.WEEKLY -> today.minusDays(6)
-                    StatisticsPeriod.MONTHLY -> today.withDayOfMonth(1)
-                    StatisticsPeriod.YEARLY -> today.withDayOfYear(1)
-                }
-                items(habits) { habit ->
-                    val percentage = viewModel.getHabitCompletionPercentage(habit, startDate, today)
-                    val completions = viewModel.getHabitCompletionCount(habit, startDate, today)
-                    HabitStatCard(habit = habit, percentage = percentage, completions = completions, startDate = startDate, endDate = today)
+                items(habitStats) { stat ->
+                    HabitStatCard(stat = stat)
                 }
             }
         }
@@ -211,14 +196,11 @@ private fun BarChart(stats: Map<LocalDate, Int>, modifier: Modifier = Modifier) 
 }
 
 @Composable
-private fun HabitStatCard(
-    habit: Habit,
-    percentage: Double,
-    completions: Int,
-    startDate: LocalDate,
-    endDate: LocalDate
-) {
-    val daysInPeriod = ChronoUnit.DAYS.between(startDate, endDate) + 1
+private fun HabitStatCard(stat: HabitStat) {
+    val habit = stat.habit
+    val percentage = stat.percentage
+    val completions = stat.completions
+    val daysInPeriod = stat.daysInPeriod
 
     val progressColor = when {
         percentage >= 80 -> successColor()

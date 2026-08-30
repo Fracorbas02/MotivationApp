@@ -3,22 +3,26 @@ package com.fracorbas.motivationapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fracorbas.motivationapp.data.model.Habit
+import com.fracorbas.motivationapp.data.model.HabitCompletion
 import com.fracorbas.motivationapp.data.repository.HabitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import javax.inject.Inject
 
+enum class StatisticsPeriod { WEEKLY, MONTHLY, YEARLY }
+
 /**
- * ViewModel for the statistics screen.
+ * Statistics computed from the completion history, exposed reactively.
  *
- * Backed by the completion history table for accurate per-day counts,
- * completion percentages and streaks.
+ * All derived state is built from [HabitRepository.getAllHabits] combined with
+ * [HabitRepository.observeAllCompletions], so the UI never blocks on a query.
  */
 @HiltViewModel
 class StatisticsViewModel @Inject constructor(
@@ -26,108 +30,110 @@ class StatisticsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val allHabits: StateFlow<List<Habit>> = repository.getAllHabits()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /**
-     * Per-date completion counts for the period, read from the history table.
-     * Blocks on a coroutine query — called from a composable; fine for the
-     * small data volumes involved here.
-     */
-    fun getCompletionStatsForPeriod(
-        habits: List<Habit>,
-        startDate: LocalDate,
-        endDate: LocalDate
-    ): Map<LocalDate, Int> = runBlocking {
-        repository.getCompletionCountsByDate(startDate, endDate)
-    }
+    private val completions: StateFlow<List<HabitCompletion>> = repository.observeAllCompletions()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun getWeeklyStats(habits: List<Habit>): Map<LocalDate, Int> {
-        val end = LocalDate.now()
-        val start = end.minusDays(6)
-        return getCompletionStatsForPeriod(habits, start, end)
-    }
+    private val _selectedPeriod = MutableStateFlow(StatisticsPeriod.WEEKLY)
+    val selectedPeriod: StateFlow<StatisticsPeriod> = _selectedPeriod.asStateFlow()
 
-    fun getMonthlyStats(habits: List<Habit>): Map<LocalDate, Int> {
+    fun setPeriod(period: StatisticsPeriod) { _selectedPeriod.value = period }
+
+    /** Summary figures (today / week / month / year / longest streak / active). */
+    val summary: StateFlow<StatisticsSummary> = combine(allHabits, completions) { habits, comps ->
+        computeSummary(habits, comps)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), StatisticsSummary(0, 0, 0, 0, 0, 0))
+
+    /** Per-date completion counts for the selected period (zeros filled). */
+    val periodStats: StateFlow<Map<LocalDate, Int>> =
+        combine(allHabits, completions, _selectedPeriod) { _, comps, period ->
+            val (start, end) = periodBounds(period)
+            computePeriodCounts(comps, start, end)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    /** Per-habit completion stats for the selected period. */
+    val habitStats: StateFlow<List<HabitStat>> =
+        combine(allHabits, completions, _selectedPeriod) { habits, comps, period ->
+            val (start, end) = periodBounds(period)
+            habits.map { habit ->
+                val count = comps.count { it.habitId == habit.id && it.completedDate in start..end }
+                val daysInPeriod = ChronoUnit.DAYS.between(start, end) + 1
+                HabitStat(
+                    habit = habit,
+                    completions = count,
+                    percentage = completionPercentage(habit, count, start, end),
+                    daysInPeriod = daysInPeriod.toInt()
+                )
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    private fun periodBounds(period: StatisticsPeriod): Pair<LocalDate, LocalDate> {
         val today = LocalDate.now()
-        val start = today.withDayOfMonth(1)
-        return getCompletionStatsForPeriod(habits, start, today)
+        return when (period) {
+            StatisticsPeriod.WEEKLY -> today.minusDays(6) to today
+            StatisticsPeriod.MONTHLY -> today.withDayOfMonth(1) to today
+            StatisticsPeriod.YEARLY -> today.withDayOfYear(1) to today
+        }
     }
 
-    fun getYearlyStats(habits: List<Habit>): Map<LocalDate, Int> {
-        val today = LocalDate.now()
-        val start = today.withDayOfYear(1)
-        return getCompletionStatsForPeriod(habits, start, today)
+    private fun computePeriodCounts(
+        comps: List<HabitCompletion>,
+        start: LocalDate,
+        end: LocalDate
+    ): Map<LocalDate, Int> {
+        val raw = comps.asSequence()
+            .filter { it.completedDate in start..end }
+            .groupingBy { it.completedDate }
+            .eachCount()
+        val result = LinkedHashMap<LocalDate, Int>()
+        var cursor = start
+        while (!cursor.isAfter(end)) {
+            result[cursor] = raw[cursor] ?: 0
+            cursor = cursor.plusDays(1)
+        }
+        return result
     }
 
-    /**
-     * Completion percentage for a habit over [startDate, endDate] based on real
-     * completion count vs. the expected number of completions given its frequency.
-     */
-    fun getHabitCompletionPercentage(
+    private fun completionPercentage(
         habit: Habit,
-        startDate: LocalDate,
-        endDate: LocalDate
+        actual: Int,
+        start: LocalDate,
+        end: LocalDate
     ): Double {
-        val totalDays = ChronoUnit.DAYS.between(startDate, endDate) + 1
-        if (totalDays <= 0) return 0.0
-
-        val actual = runBlocking { repository.getHabitCompletionCount(habit.id, startDate, endDate) }
         if (actual <= 0) return 0.0
+        val totalDays = ChronoUnit.DAYS.between(start, end) + 1
+        if (totalDays <= 0) return 0.0
 
         val frequency = habit.notificationFrequency ?: 1
         val unit = habit.notificationFrequencyUnit ?: "days"
-
         val expected = when (unit) {
             "days" -> totalDays / frequency.toDouble()
             "weeks" -> totalDays / (frequency * 7.0)
-            "months" -> {
-                val months = ChronoUnit.MONTHS.between(startDate, endDate) + 1
-                months / frequency.toDouble()
-            }
+            "months" -> (ChronoUnit.MONTHS.between(start, end) + 1) / frequency.toDouble()
             else -> totalDays.toDouble()
         }
-
         return if (expected > 0) (actual / expected * 100.0).coerceAtMost(100.0) else 0.0
     }
 
-    /**
-     * Real completion count for a habit in [startDate, endDate].
-     */
-    fun getHabitCompletionCount(habit: Habit, startDate: LocalDate, endDate: LocalDate): Int =
-        runBlocking { repository.getHabitCompletionCount(habit.id, startDate, endDate) }
-
-    fun getLongestStreak(habits: List<Habit>): Int =
-        habits.maxOfOrNull { it.streak } ?: 0
-
-    fun getStatisticsSummary(habits: List<Habit>): StatisticsSummary {
+    private fun computeSummary(habits: List<Habit>, comps: List<HabitCompletion>): StatisticsSummary {
         val today = LocalDate.now()
         val weekStart = today.minusDays(6)
         val monthStart = today.withDayOfMonth(1)
         val yearStart = today.withDayOfYear(1)
 
-        val todayCompletions = runBlocking {
-            repository.getHabitCompletionCountAllHabits(habits, today, today)
-        }
-        val weekCompletions = runBlocking {
-            repository.getHabitCompletionCountAllHabits(habits, weekStart, today)
-        }
-        val monthCompletions = runBlocking {
-            repository.getHabitCompletionCountAllHabits(habits, monthStart, today)
-        }
-        val yearCompletions = runBlocking {
-            repository.getHabitCompletionCountAllHabits(habits, yearStart, today)
-        }
+        val todayCompletions = comps.count { it.completedDate == today }
+        val weekCompletions = comps.count { it.completedDate in weekStart..today }
+        val monthCompletions = comps.count { it.completedDate in monthStart..today }
+        val yearCompletions = comps.count { it.completedDate in yearStart..today }
+        val longestStreak = habits.maxOfOrNull { it.streak } ?: 0
 
         return StatisticsSummary(
             todayCompletions = todayCompletions,
             weekCompletions = weekCompletions,
             monthCompletions = monthCompletions,
             yearCompletions = yearCompletions,
-            longestStreak = getLongestStreak(habits),
+            longestStreak = longestStreak,
             activeHabits = habits.count { it.isActive }
         )
     }
@@ -140,4 +146,11 @@ data class StatisticsSummary(
     val yearCompletions: Int,
     val longestStreak: Int,
     val activeHabits: Int
+)
+
+data class HabitStat(
+    val habit: Habit,
+    val completions: Int,
+    val percentage: Double,
+    val daysInPeriod: Int
 )
