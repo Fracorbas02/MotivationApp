@@ -29,7 +29,8 @@ enum class ThemeMode(val storageKey: String) {
 
 data class Settings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColor: Boolean = true
+    val dynamicColor: Boolean = true,
+    val dailyReminderEnabled: Boolean = true
 )
 
 /**
@@ -43,11 +44,13 @@ class SettingsRepository @Inject constructor(
 
     private val THEME_KEY = stringPreferencesKey("theme_mode")
     private val DYNAMIC_COLOR_KEY = booleanPreferencesKey("dynamic_color")
+    private val DAILY_REMINDER_KEY = booleanPreferencesKey("daily_reminder_enabled")
 
     val settings: Flow<Settings> = context.dataStore.data.map { prefs ->
         Settings(
             themeMode = ThemeMode.fromString(prefs[THEME_KEY]),
-            dynamicColor = prefs[DYNAMIC_COLOR_KEY] ?: true
+            dynamicColor = prefs[DYNAMIC_COLOR_KEY] ?: true,
+            dailyReminderEnabled = prefs[DAILY_REMINDER_KEY] ?: true
         )
     }
 
@@ -57,5 +60,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setDynamicColor(enabled: Boolean) {
         context.dataStore.edit { it[DYNAMIC_COLOR_KEY] = enabled }
+    }
+
+    suspend fun setDailyReminderEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[DAILY_REMINDER_KEY] = enabled }
     }
 }

@@ -31,4 +31,8 @@ class SettingsViewModel @Inject constructor(
     fun setDynamicColor(enabled: Boolean) = viewModelScope.launch {
         repository.setDynamicColor(enabled)
     }
+
+    fun setDailyReminderEnabled(enabled: Boolean) = viewModelScope.launch {
+        repository.setDailyReminderEnabled(enabled)
+    }
 }

@@ -16,6 +16,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Settings
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.tooling.preview.Preview
 import com.fracorbas.motivationapp.data.repository.ThemeMode
+import com.fracorbas.motivationapp.notification.DailyReminderScheduler
 import com.fracorbas.motivationapp.ui.components.AppTopBar
 import com.fracorbas.motivationapp.ui.components.SectionLabel
 import com.fracorbas.motivationapp.ui.theme.MotivationAppTheme
@@ -147,6 +149,19 @@ fun SettingsScreen(
                 description = "Adapter les couleurs au fond d'écran (Android 12+)",
                 checked = settings.dynamicColor,
                 onCheckedChange = { viewModel.setDynamicColor(it) }
+            )
+
+            // Notifications section
+            SectionLabel("Notifications")
+            ToggleRow(
+                icon = Icons.Default.Notifications,
+                label = "Rappel de fin de journée",
+                description = "Récapitulatif vers 21h des habitudes non complétées",
+                checked = settings.dailyReminderEnabled,
+                onCheckedChange = {
+                    viewModel.setDailyReminderEnabled(it)
+                    DailyReminderScheduler.schedule(context, it)
+                }
             )
 
             // Data section
