@@ -36,6 +36,9 @@ abstract class HabitDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: HabitDatabase? = null
 
+        /** Migrations, exposed for instrumented tests. */
+        internal val ALL_MIGRATIONS: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Create triggers table
