@@ -19,6 +19,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.fracorbas.motivationapp.ui.AchievementsScreen
 import com.fracorbas.motivationapp.ui.AddHabitScreen
 import com.fracorbas.motivationapp.ui.AddTriggerScreen
 import com.fracorbas.motivationapp.ui.HabitDetailScreen
@@ -114,6 +115,7 @@ fun MotivationAppNavigation() {
                     when (page) {
                         0 -> HomeScreen(
                             onSettingsClick = { navController.navigate("settings") },
+                            onAchievementsClick = { navController.navigate("achievements") },
                             viewModel = habitViewModel,
                             contentPadding = padding
                         )
@@ -189,6 +191,13 @@ fun MotivationAppNavigation() {
                     triggerId = triggerId,
                     onBack = { navController.popBackStack() },
                     viewModel = triggerViewModel
+                )
+            }
+
+            // Achievements screen
+            composable("achievements") {
+                AchievementsScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 

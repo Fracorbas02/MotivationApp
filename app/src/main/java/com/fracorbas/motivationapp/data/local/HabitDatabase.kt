@@ -6,6 +6,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.fracorbas.motivationapp.data.model.Achievement
 import com.fracorbas.motivationapp.data.model.Habit
 import com.fracorbas.motivationapp.data.model.HabitCompletion
 import com.fracorbas.motivationapp.data.model.LocalDateConverter
@@ -22,8 +23,8 @@ import kotlinx.coroutines.launch
  * @property triggerDao Data Access Object for triggers
  */
 @Database(
-    entities = [Habit::class, Trigger::class, HabitCompletion::class],
-    version = 3,
+    entities = [Habit::class, Trigger::class, HabitCompletion::class, Achievement::class],
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(LocalDateConverter::class, LocalTimeConverter::class)
@@ -31,13 +32,14 @@ abstract class HabitDatabase : RoomDatabase() {
     abstract val habitDao: HabitDao
     abstract val triggerDao: TriggerDao
     abstract val habitCompletionDao: HabitCompletionDao
+    abstract val achievementDao: AchievementDao
 
     companion object {
         @Volatile
         private var INSTANCE: HabitDatabase? = null
 
         /** Migrations, exposed for instrumented tests. */
-        internal val ALL_MIGRATIONS: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+        internal val ALL_MIGRATIONS: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -95,6 +97,17 @@ abstract class HabitDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS achievements (
+                        badgeId TEXT NOT NULL PRIMARY KEY,
+                        unlockedAt INTEGER NOT NULL
+                    )
+                """)
+            }
+        }
+
         fun getDatabase(context: Context): HabitDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = androidx.room.Room.databaseBuilder(
@@ -102,7 +115,7 @@ abstract class HabitDatabase : RoomDatabase() {
                     HabitDatabase::class.java,
                     "motivation_app_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)

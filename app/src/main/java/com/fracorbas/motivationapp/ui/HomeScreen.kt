@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +48,7 @@ import java.time.LocalDate
 @Composable
 fun HomeScreen(
     onSettingsClick: () -> Unit,
+    onAchievementsClick: () -> Unit,
     viewModel: HabitViewModel = hiltViewModel(),
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
@@ -65,6 +67,9 @@ fun HomeScreen(
     Scaffold(
         topBar = {
             AppTopBar(title = "MotivationApp", actions = {
+                IconButton(onClick = onAchievementsClick) {
+                    Icon(Icons.Default.EmojiEvents, contentDescription = "Récompenses")
+                }
                 IconButton(onClick = onSettingsClick) {
                     Icon(Icons.Default.Settings, contentDescription = "Réglages")
                 }
@@ -181,6 +186,6 @@ fun HomeScreen(
 @Composable
 private fun HomeScreenPreview() {
     MotivationAppTheme {
-        HomeScreen(onSettingsClick = {})
+        HomeScreen(onSettingsClick = {}, onAchievementsClick = {})
     }
 }

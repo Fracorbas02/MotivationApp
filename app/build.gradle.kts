@@ -96,6 +96,10 @@ dependencies {
     // Preferences DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
+    // Glance (home-screen widgets)
+    implementation("androidx.glance:glance-appwidget:1.1.1")
+    implementation("androidx.glance:glance-material3:1.1.1")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

@@ -132,13 +132,25 @@ class StatisticsViewModel @Inject constructor(
             if (history.isEmpty()) 0 else StreakUtils.longestStreak(history)
         }.maxOrNull() ?: 0
 
+        // Consistency: over the last 30 days, how many days had at least one
+        // completion (as a percentage of 30). Only counts active habits.
+        val consistencyStart = today.minusDays(29)
+        val activeHabitIds = habits.filter { it.isActive }.map { it.id }.toSet()
+        val daysWithCompletion = comps
+            .filter { it.completedDate in consistencyStart..today && it.habitId in activeHabitIds }
+            .map { it.completedDate }
+            .toSet()
+            .size
+        val consistency = (daysWithCompletion / 30.0 * 100.0).coerceIn(0.0, 100.0)
+
         return StatisticsSummary(
             todayCompletions = todayCompletions,
             weekCompletions = weekCompletions,
             monthCompletions = monthCompletions,
             yearCompletions = yearCompletions,
             longestStreak = longestStreak,
-            activeHabits = habits.count { it.isActive }
+            activeHabits = habits.count { it.isActive },
+            consistency30Days = consistency
         )
     }
 }
@@ -149,7 +161,8 @@ data class StatisticsSummary(
     val monthCompletions: Int,
     val yearCompletions: Int,
     val longestStreak: Int,
-    val activeHabits: Int
+    val activeHabits: Int,
+    val consistency30Days: Double = 0.0
 )
 
 data class HabitStat(

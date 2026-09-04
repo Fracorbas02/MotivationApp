@@ -79,6 +79,8 @@ fun StatisticsScreen(
 
             item { SummaryGrid(summary = summary) }
 
+            item { ConsistencyCard(consistency = summary.consistency30Days) }
+
             item {
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                     SegmentedButton(
@@ -256,6 +258,65 @@ private fun HabitStatCard(stat: HabitStat) {
                 fontWeight = FontWeight.SemiBold
             )
         }
+    }
+}
+
+@Composable
+private fun ConsistencyCard(consistency: Double) {
+    val color = when {
+        consistency >= 80 -> successColor()
+        consistency >= 50 -> MaterialTheme.colorScheme.secondary
+        consistency >= 25 -> MaterialTheme.colorScheme.primary
+        else -> MaterialTheme.colorScheme.error
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(16.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = "Régularité (30 jours)",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+            Text(
+                text = "${String.format("%.0f", consistency)}%",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = color
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(8.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth((consistency / 100.0).toFloat().coerceIn(0f, 1f))
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(color)
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = when {
+                consistency >= 80 -> "Excellente régularité, continue !"
+                consistency >= 50 -> "Bonne régularité, tu peux mieux faire."
+                consistency >= 25 -> "Tu progresses, mais reste régulier."
+                else -> "Il est temps de s'y mettre sérieusement."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

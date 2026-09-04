@@ -53,6 +53,13 @@ object AppModule {
     fun provideHabitCompletionDao(database: HabitDatabase) = database.habitCompletionDao
 
     /**
+     * Provides the AchievementDao from the database
+     */
+    @Provides
+    @Singleton
+    fun provideAchievementDao(database: HabitDatabase) = database.achievementDao
+
+    /**
      * Provides the HabitRepository
      */
     @Provides
