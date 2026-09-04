@@ -84,11 +84,15 @@ class HabitAlarmScheduler @Inject constructor(
             calendar.add(Calendar.DAY_OF_MONTH, diff)
         } else if (targetDayOfMonth != null && frequencyUnit == "months") {
             val maxDay = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
-            val day = targetDayOfMonth.coerceAtMost(maxDay)
+            // Treat 31 (or any value exceeding month length) as last day of month
+            val day = if (targetDayOfMonth >= maxDay) maxDay else targetDayOfMonth
             if (calendar.get(Calendar.DAY_OF_MONTH) > day) {
                 calendar.add(Calendar.MONTH, 1)
             }
-            calendar.set(Calendar.DAY_OF_MONTH, day)
+            // Re-read maxDay in case we moved to a new month
+            val maxDayAdjusted = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+            val finalDay = if (targetDayOfMonth >= maxDayAdjusted) maxDayAdjusted else targetDayOfMonth
+            calendar.set(Calendar.DAY_OF_MONTH, finalDay)
         }
 
         if (calendar.timeInMillis > now) {

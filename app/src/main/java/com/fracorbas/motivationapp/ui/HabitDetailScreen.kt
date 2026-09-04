@@ -64,6 +64,34 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
+/**
+ * Human-readable frequency label that correctly handles null frequency values
+ * and both old (DAILY/WEEKLY/MONTHLY) and new (days/weeks/months) storage keys.
+ */
+private fun formatFrequencyDisplay(h: Habit): String {
+    val unit = h.notificationFrequencyUnit
+    val freq = h.notificationFrequency
+    return when {
+        unit == null || unit == "days" || unit == "DAILY" -> {
+            if (freq == null || freq == 1) "Quotidienne" else "Tous les $freq jour(s)"
+        }
+        unit == "weeks" || unit == "WEEKLY" -> {
+            val dayLabel = h.targetDayOfWeek?.let {
+                java.time.DayOfWeek.of(it).getDisplayName(java.time.format.TextStyle.FULL, Locale.FRENCH)
+                    .replaceFirstChar { c -> c.titlecase() }
+            }
+            val base = if (freq == null || freq == 1) "Hebdomadaire" else "Tous les $freq semaine(s)"
+            if (dayLabel != null) "$base ($dayLabel)" else base
+        }
+        unit == "months" || unit == "MONTHLY" -> {
+            val dayLabel = h.targetDayOfMonth?.let { "le $it" }
+            val base = if (freq == null || freq == 1) "Mensuelle" else "Tous les $freq mois"
+            if (dayLabel != null) "$base $dayLabel" else base
+        }
+        else -> "Quotidienne"
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HabitDetailScreen(
@@ -183,15 +211,7 @@ fun HabitDetailScreen(
                             it.format(DateTimeFormatter.ofPattern("HH:mm"))
                         )
                     }
-                    val freq = h.notificationFrequency?.let { f ->
-                        val unitDisplay = when (h.notificationFrequencyUnit) {
-                            "days", "DAILY" -> "jour(s)"
-                            "weeks", "WEEKLY" -> "semaine(s)"
-                            "months", "MONTHLY" -> "mois"
-                            else -> "jour(s)"
-                        }
-                        "Tous les $f $unitDisplay"
-                    } ?: "Quotidienne"
+                    val freq = formatFrequencyDisplay(h)
                     AttributeRow(Icons.Default.CalendarMonth, "Fréquence", freq)
                 }
             }

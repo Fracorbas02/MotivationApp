@@ -307,8 +307,18 @@ fun HabitRow(
     val metaParts = buildList {
         add(habit.trigger)
         if (reminderText != null) add(reminderText)
-        if (habit.notificationEnabled && habit.notificationFrequency != null) {
-            add("Rappel ${habit.notificationFrequency} ${habit.notificationFrequencyUnit ?: "j"}")
+        if (habit.notificationEnabled) {
+            val unitLabel = when (habit.notificationFrequencyUnit) {
+                "weeks", "WEEKLY" -> "hebdo"
+                "months", "MONTHLY" -> "mensuel"
+                else -> "quotidien"
+            }
+            val freqText = if (habit.notificationFrequency != null && habit.notificationFrequency > 1) {
+                "${habit.notificationFrequency}x $unitLabel"
+            } else {
+                unitLabel
+            }
+            add("Rappel $freqText")
         }
     }
     val meta = metaParts.joinToString("  ·  ")

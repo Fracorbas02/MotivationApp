@@ -92,7 +92,8 @@ object HabitFrequencyUtils {
         if (lastCompleted == null) {
             return when (habit.notificationFrequencyUnit ?: "days") {
                 "weeks" -> habit.targetDayOfWeek == null || today.dayOfWeek.value == habit.targetDayOfWeek
-                "months" -> habit.targetDayOfMonth == null || today.dayOfMonth == habit.targetDayOfMonth
+                "months" -> habit.targetDayOfMonth == null ||
+                    today.dayOfMonth == resolveDayOfMonth(habit.targetDayOfMonth, today)
                 else -> true
             }
         }
@@ -120,7 +121,7 @@ object HabitFrequencyUtils {
                 val currentMonthStart = today.withDayOfMonth(1)
                 val monthsBetween = ChronoUnit.MONTHS.between(lastMonthStart, currentMonthStart)
                 if (habit.targetDayOfMonth != null) {
-                    if (today.dayOfMonth != habit.targetDayOfMonth) return false
+                    if (today.dayOfMonth != resolveDayOfMonth(habit.targetDayOfMonth, today)) return false
                     monthsBetween >= frequency.toLong()
                 } else {
                     monthsBetween >= frequency.toLong()
@@ -146,18 +147,23 @@ object HabitFrequencyUtils {
     private fun nextMonthlyDueDate(lastCompleted: LocalDate, targetDayOfMonth: Int, frequency: Int): LocalDate {
         var monthOffset = frequency
         var candidate = lastCompleted.plusMonths(monthOffset.toLong())
-        var day = targetDayOfMonth.coerceAtMost(candidate.lengthOfMonth())
-        candidate = candidate.withDayOfMonth(day)
+        candidate = candidate.withDayOfMonth(resolveDayOfMonth(targetDayOfMonth, candidate))
 
         val today = LocalDate.now()
         while (candidate.isBefore(today)) {
             monthOffset += frequency
             candidate = lastCompleted.plusMonths(monthOffset.toLong())
-            day = targetDayOfMonth.coerceAtMost(candidate.lengthOfMonth())
-            candidate = candidate.withDayOfMonth(day)
+            candidate = candidate.withDayOfMonth(resolveDayOfMonth(targetDayOfMonth, candidate))
         }
         return candidate
     }
+
+    /**
+     * Resolve targetDayOfMonth to an actual day, treating 31 (or any value
+     * exceeding the month length) as the last day of that month.
+     */
+    private fun resolveDayOfMonth(target: Int, date: LocalDate): Int =
+        if (target >= date.lengthOfMonth()) date.lengthOfMonth() else target
 
     private fun Int.toDayOfWeek(): DayOfWeek = DayOfWeek.of(this)
 }
