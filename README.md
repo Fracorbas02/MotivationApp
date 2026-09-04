@@ -21,7 +21,8 @@ Aider l'utilisateur à :
 ## Fonctionnement
 
 L'app s'ouvre sur **Accueil** (résumé du jour + citation du jour tirée du livre),
-puis trois onglets en bas d'écran :
+puis trois onglets navigables par **swipe gauche/droite** ou via la barre
+inférieure :
 
 | Onglet       | Contenu                                                                 |
 |--------------|-------------------------------------------------------------------------|
@@ -65,7 +66,7 @@ Navigation Compose, WorkManager, DataStore.
 
 ```
 app/src/main/java/com/fracorbas/motivationapp/
-├── MainActivity.kt            # NavHost + bottom bar (Accueil, Habitudes, Stats)
+├── MainActivity.kt            # NavHost + HorizontalPager (Accueil, Habitudes, Stats)
 ├── MotivationApp.kt           # Application Hilt
 ├── data/
 │   ├── local/                 # Room : DAOs, HabitDatabase, migrations
@@ -79,19 +80,122 @@ app/src/main/java/com/fracorbas/motivationapp/
 └── viewmodel/                 # ViewModels (HabitViewModel, StatisticsViewModel…)
 ```
 
-## Pré-requis
+## Installation de l'environnement de développement
 
-- Android SDK (déjà configuré via `local.properties` → `sdk.dir`).
-- JDK 17 (toolchain Kotlin configurée sur 17).
-- minSdk 24 / targetSdk 37 / compileSdk 37.
-- Gradle fourni via le wrapper (`./gradlew`).
+Le projet nécessite trois composants : un JDK 17, le SDK Android (platform 37,
+build-tools 37) et Gradle (fourni via le wrapper). Les instructions ci-dessous
+couvrent ArchLinux. Pour les autres distributions, adaptez les noms de paquets.
+
+### 1. JDK 17
+
+```bash
+sudo pacman -S jdk17-openjdk
+```
+
+Vérifier :
+
+```bash
+java -version
+# openjdk version "17.x.x"
+```
+
+### 2. SDK Android (cmdline-tools + platform-tools)
+
+Les paquets officiels ne fournissent que les cmdline-tools ; les composants du
+SDK (platform, build-tools) s'installent ensuite via `sdkmanager`.
+
+```bash
+# cmdline-tools (AUR)
+yay -S android-sdk-cmdline-tools-latest
+
+# Donner les droits d'écriture sur le dossier SDK
+sudo chown -R $USER:$USER /opt/android-sdk
+
+# platform-tools fournit adb (dépot officiel)
+sudo pacman -S android-tools
+```
+
+### 3. Variables d'environnement
+
+Ajouter à `~/.bashrc` (ou `~/.zshrc`) :
+
+```bash
+export ANDROID_HOME=/opt/android-sdk
+export ANDROID_SDK_ROOT=$ANDROID_HOME
+export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+```
+
+Recharger le shell :
+
+```bash
+source ~/.bashrc
+```
+
+### 4. Composants du SDK
+
+```bash
+# Accepter les licences
+sdkmanager --licenses
+
+# Installer platform 37, build-tools 37 et platform-tools
+sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "platform-tools"
+```
+
+> **Note** : le nom du package platform est `platforms;android-37.0` (avec le
+> `.0`), pas `platforms;android-37`.
+
+### 5. `local.properties`
+
+Créer le fichier `local.properties` à la racine du projet pointant vers le SDK :
+
+```bash
+echo "sdk.dir=/opt/android-sdk" > local.properties
+```
+
+### 6. Wrapper Gradle
+
+Si le dossier `gradle/wrapper/` est absent (il est dans `.gitignore`), générer
+le wrapper à partir d'une distribution Gradle temporaire :
+
+```bash
+curl -L https://services.gradle.org/distributions/gradle-9.7.1-bin.zip -o /tmp/gradle.zip
+unzip -q /tmp/gradle.zip -d /tmp/
+/tmp/gradle-9.7.1/bin/gradle wrapper --gradle-version 9.7.1
+rm -rf /tmp/gradle.zip /tmp/gradle-9.7.1
+```
+
+### 7. Débogage USB (optionnel)
+
+Pour tester sur un téléphone physique :
+
+```bash
+sudo pacman -S android-tools
+```
+
+Activez le « Débogage USB » dans les options développeur du téléphone, branchez-le
+et vérifiez la connexion :
+
+```bash
+adb devices
+```
+
+## Pré-requis (récapitulatif)
+
+| Composant        | Version     | Source                              |
+|------------------|-------------|-------------------------------------|
+| JDK              | 17          | `jdk17-openjdk` (pacman)            |
+| Android SDK      | platform 37 | `android-sdk-cmdline-tools-latest` (AUR) + `sdkmanager` |
+| Build-tools      | 37.0.0      | `sdkmanager`                        |
+| Platform-tools   | 37.x        | `android-tools` (pacman)            |
+| Gradle           | 9.7.1       | via le wrapper `./gradlew`          |
+| minSdk / target  | 24 / 37     | —                                   |
 
 ## Build et exécution
 
-Installer sur un appareil/émulateur connecté :
+Vérifier que tout est en place :
 
 ```bash
-./gradlew installDebug
+./gradlew --version
 ```
 
 Compiler l'APK debug sans l'installer :
@@ -99,6 +203,12 @@ Compiler l'APK debug sans l'installer :
 ```bash
 ./gradlew :app:assembleDebug
 # APK généré : app/build/outputs/apk/debug/app-debug.apk
+```
+
+Installer sur un appareil/émulateur connecté :
+
+```bash
+./gradlew installDebug
 ```
 
 Build release (nécessite un keystore de signature) :
