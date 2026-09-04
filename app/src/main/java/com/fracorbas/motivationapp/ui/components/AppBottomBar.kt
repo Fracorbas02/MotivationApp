@@ -27,19 +27,20 @@ enum class TopTab(val route: String, val label: String, val icon: ImageVector) {
 
 /**
  * Material 3 bottom navigation bar for the three top-level destinations.
- * Hidden on detail/edit screens.
+ * Acts as a visual indicator synced with the HorizontalPager; tabs can also
+ * be tapped to jump to a page.
  */
 @Composable
 fun AppBottomBar(
-    currentRoute: String?,
-    onTabSelected: (TopTab) -> Unit,
+    selectedTabIndex: Int,
+    onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     NavigationBar(modifier = modifier) {
-        TopTab.entries.forEach { tab ->
+        TopTab.entries.forEachIndexed { index, tab ->
             NavigationBarItem(
-                selected = currentRoute == tab.route,
-                onClick = { onTabSelected(tab) },
+                selected = index == selectedTabIndex,
+                onClick = { onTabSelected(index) },
                 icon = { Icon(tab.icon, contentDescription = tab.label) },
                 label = { Text(tab.label) }
             )

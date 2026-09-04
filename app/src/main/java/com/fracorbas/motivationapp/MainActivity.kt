@@ -4,15 +4,17 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -34,6 +36,7 @@ import com.fracorbas.motivationapp.viewmodel.SettingsViewModel
 import com.fracorbas.motivationapp.viewmodel.StatisticsViewModel
 import com.fracorbas.motivationapp.viewmodel.TriggerViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 
 /**
  * Main activity for the MotivationApp.
@@ -67,9 +70,12 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Navigation graph for the MotivationApp, with a bottom bar for the three
- * top-level destinations (Accueil, Habitudes, Stats). Sub-screens (detail,
- * edit, settings, triggers) hide the bar and show a back arrow instead.
+ * Navigation graph for the MotivationApp.
+ *
+ * The three top-level destinations (Accueil, Habitudes, Stats) live inside a
+ * [HorizontalPager] so the user can swipe between them. Sub-screens (detail,
+ * edit, settings, triggers) are regular NavHost destinations that hide the
+ * bottom bar and show a back arrow instead.
  */
 @Composable
 fun MotivationAppNavigation() {
@@ -82,53 +88,52 @@ fun MotivationAppNavigation() {
 
     val currentBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = currentBackStackEntry?.destination?.route
-    val showBottomBar = currentRoute in TopTab.routes
+    val showBottomBar = currentRoute == "tabs"
 
-    fun navigateToTab(tab: TopTab) {
-        navController.navigate(tab.route) {
-            // Pop back to the start destination to avoid a growing stack.
-            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-            launchSingleTop = true
-            restoreState = true
-        }
-    }
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         bottomBar = {
             if (showBottomBar) {
-                AppBottomBar(currentRoute = currentRoute, onTabSelected = ::navigateToTab)
+                AppBottomBar(
+                    selectedTabIndex = pagerState.currentPage,
+                    onTabSelected = { index ->
+                        scope.launch { pagerState.animateScrollToPage(index) }
+                    }
+                )
             }
         }
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = TopTab.HOME.route
+            startDestination = "tabs"
         ) {
-            composable(TopTab.HOME.route) {
-                HomeScreen(
-                    onSettingsClick = { navController.navigate("settings") },
-                    viewModel = habitViewModel,
-                    contentPadding = padding
-                )
-            }
-            composable(TopTab.HABITS.route) {
-                MainScreen(
-                    onAddHabitClick = { navController.navigate("addHabit") },
-                    onHabitClick = { habitId ->
-                        navController.navigate("habitDetail/$habitId")
-                    },
-                    onEditHabitClick = { habitId ->
-                        navController.navigate("addHabit/$habitId")
-                    },
-                    viewModel = habitViewModel,
-                    contentPadding = padding
-                )
-            }
-            composable(TopTab.STATS.route) {
-                StatisticsScreen(
-                    viewModel = statisticsViewModel,
-                    contentPadding = padding
-                )
+            composable("tabs") {
+                HorizontalPager(state = pagerState) { page ->
+                    when (page) {
+                        0 -> HomeScreen(
+                            onSettingsClick = { navController.navigate("settings") },
+                            viewModel = habitViewModel,
+                            contentPadding = padding
+                        )
+                        1 -> MainScreen(
+                            onAddHabitClick = { navController.navigate("addHabit") },
+                            onHabitClick = { habitId ->
+                                navController.navigate("habitDetail/$habitId")
+                            },
+                            onEditHabitClick = { habitId ->
+                                navController.navigate("addHabit/$habitId")
+                            },
+                            viewModel = habitViewModel,
+                            contentPadding = padding
+                        )
+                        2 -> StatisticsScreen(
+                            viewModel = statisticsViewModel,
+                            contentPadding = padding
+                        )
+                    }
+                }
             }
 
             composable("habitDetail/{habitId}") { backStackEntry ->

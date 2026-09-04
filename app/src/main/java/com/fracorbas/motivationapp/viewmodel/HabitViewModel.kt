@@ -147,6 +147,7 @@ class HabitViewModel @Inject constructor(
         triggerId: Int? = null,
         reminderTime: LocalTime?,
         notificationEnabled: Boolean,
+        isActive: Boolean = true,
         notificationFrequency: Int? = null,
         notificationFrequencyUnit: String? = null
     ) = viewModelScope.launch {
@@ -157,6 +158,7 @@ class HabitViewModel @Inject constructor(
             triggerId = triggerId,
             reminderTime = reminderTime,
             notificationEnabled = notificationEnabled,
+            isActive = isActive,
             notificationFrequency = notificationFrequency,
             notificationFrequencyUnit = notificationFrequencyUnit
         )
@@ -279,7 +281,9 @@ class HabitViewModel @Inject constructor(
                 habitId = habitId,
                 title = habit.title,
                 trigger = habit.trigger,
-                reminderTime = habit.reminderTime!!
+                reminderTime = habit.reminderTime!!,
+                frequency = habit.notificationFrequency,
+                frequencyUnit = habit.notificationFrequencyUnit
             )
         } else if (!enabled && habit.reminderTime != null) {
             alarmScheduler.cancelHabitReminder(habitId)

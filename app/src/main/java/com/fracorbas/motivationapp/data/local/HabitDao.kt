@@ -53,36 +53,6 @@ interface HabitDao {
     suspend fun deleteHabit(habit: Habit)
 
     /**
-     * Toggle habit completion for today
-     */
-    @Query("""
-        UPDATE habits 
-        SET 
-            streak = CASE 
-                WHEN lastCompletedDate = :yesterday THEN streak + 1
-                WHEN lastCompletedDate IS NULL OR lastCompletedDate < :yesterday THEN 1
-                ELSE 1
-            END,
-            lastCompletedDate = :today
-        WHERE id = :habitId
-    """)
-    suspend fun markHabitCompleted(
-        habitId: Int,
-        today: LocalDate,
-        yesterday: LocalDate
-    )
-
-    /**
-     * Reset streak if habit not completed today (for daily habits)
-     */
-    @Query("""
-        UPDATE habits 
-        SET streak = 0
-        WHERE id = :habitId AND lastCompletedDate != :today
-    """)
-    suspend fun resetStreakIfNeeded(habitId: Int, today: LocalDate)
-
-    /**
      * Get habits that need notification at a specific time
      */
     @Query("""

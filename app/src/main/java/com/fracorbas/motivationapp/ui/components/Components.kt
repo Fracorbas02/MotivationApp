@@ -272,7 +272,7 @@ private fun CompletionToggle(
             .clip(CircleShape)
             .background(container)
             .clickable(enabled = isCompletionDay || isCompletedToday) {
-                if (isCompletionDay) onToggle()
+                onToggle()
             }
     ) {
         Icon(

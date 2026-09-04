@@ -3,17 +3,21 @@ package com.fracorbas.motivationapp.data.model
 /**
  * Enum for notification frequency units.
  */
-enum class NotificationFrequencyUnit(val displayName: String, val pluralDisplayName: String) {
-    DAILY("Jour", "Jours"),
-    WEEKLY("Semaine", "Semaines"),
-    MONTHLY("Mois", "Mois");
+enum class NotificationFrequencyUnit(
+    val displayName: String,
+    val pluralDisplayName: String,
+    val storageKey: String
+) {
+    DAILY("Jour", "Jours", "days"),
+    WEEKLY("Semaine", "Semaines", "weeks"),
+    MONTHLY("Mois", "Mois", "months");
 
     companion object {
         fun fromString(value: String?): NotificationFrequencyUnit? {
             return when (value) {
-                "days", "day" -> DAILY
-                "weeks", "week" -> WEEKLY
-                "months", "month" -> MONTHLY
+                "days", "day", "DAILY" -> DAILY
+                "weeks", "week", "WEEKLY" -> WEEKLY
+                "months", "month", "MONTHLY" -> MONTHLY
                 else -> null
             }
         }

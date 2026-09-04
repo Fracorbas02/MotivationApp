@@ -54,7 +54,9 @@ fun HomeScreen(
     val activeCount by viewModel.activeHabitsCount.collectAsState()
     val habits by viewModel.allHabits.collectAsState()
 
-    val progress = if (activeCount > 0) todayCompleted.toFloat() / activeCount else 0f
+    // Count only active habits completed today to avoid progress > 100%
+    val todayCompletedActive = habits.count { it.isActive && it.lastCompletedDate == LocalDate.now() }
+    val progress = if (activeCount > 0) todayCompletedActive.toFloat() / activeCount else 0f
     val quote = AtomicHabitsQuotes.forDay(LocalDate.now().dayOfYear)
     val todayLabel = LocalDate.now().format(
         java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM", java.util.Locale.FRENCH)
@@ -110,7 +112,7 @@ fun HomeScreen(
                             modifier = Modifier.weight(1f)
                         )
                         Text(
-                            text = "$todayCompleted / $activeCount",
+                            text = "$todayCompletedActive / $activeCount",
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
@@ -130,7 +132,7 @@ fun HomeScreen(
                     val message = when {
                         activeCount == 0 -> "Ajoute ta première habitude pour démarrer."
                         progress >= 1f -> "Journée complète. Bravo !"
-                        todayCompleted == 0 -> "Aucune habitude complétée pour l'instant."
+                        todayCompletedActive == 0 -> "Aucune habitude complétée pour l'instant."
                         else -> "Continue, tu avances bien."
                     }
                     Text(message, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -6,6 +6,7 @@ import com.fracorbas.motivationapp.data.local.HabitDao
 import com.fracorbas.motivationapp.data.local.HabitDatabase
 import com.fracorbas.motivationapp.data.model.Habit
 import com.fracorbas.motivationapp.data.model.HabitCompletion
+import com.fracorbas.motivationapp.data.model.StreakUtils
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import javax.inject.Inject
@@ -58,25 +59,17 @@ class HabitRepository @Inject constructor(
      */
     private suspend fun markCompleted(habitId: Int) {
         val today = LocalDate.now()
-        val yesterday = today.minusDays(1)
         database.withTransaction {
-            // Compute the new streak from history for robustness.
-            val previousDate = completionDao.getCompletionsBetween(habitId, today.minusDays(365), yesterday)
-                .lastOrNull()
-            val newStreak = if (previousDate == yesterday) {
-                // Continued the chain: previous streak + 1. Recover it from the habit.
-                val current = habitDao.getHabitById(habitId)
-                (current?.streak ?: 0) + 1
-            } else {
-                1
-            }
-            habitDao.markHabitCompleted(habitId, today, yesterday)
-            // Overwrite streak with the computed value (markHabitCompleted may set it differently).
-            val updated = habitDao.getHabitById(habitId)
-            if (updated != null && updated.streak != newStreak) {
-                habitDao.updateHabit(updated.copy(streak = newStreak, lastCompletedDate = today))
-            }
+            // Insert the completion first, then compute the streak from the full
+            // completion history — the source of truth — so it is always correct
+            // regardless of any cached streak value on the Habit entity.
             completionDao.insertCompletion(HabitCompletion(habitId = habitId, completedDate = today))
+            val history = completionDao.getAllCompletionsForHabit(habitId)
+            val newStreak = StreakUtils.currentStreak(history)
+            val current = habitDao.getHabitById(habitId)
+            if (current != null) {
+                habitDao.updateHabit(current.copy(streak = newStreak, lastCompletedDate = today))
+            }
         }
     }
 
@@ -90,7 +83,7 @@ class HabitRepository @Inject constructor(
             // Recompute lastCompletedDate and streak from the history.
             val history = completionDao.getAllCompletionsForHabit(habitId)
             val newLast = history.lastOrNull()
-            val newStreak = computeCurrentStreak(newLast, history)
+            val newStreak = computeCurrentStreak(history)
             val current = habitDao.getHabitById(habitId) ?: return@withTransaction
             habitDao.updateHabit(current.copy(lastCompletedDate = newLast, streak = newStreak))
         }
@@ -109,11 +102,10 @@ class HabitRepository @Inject constructor(
     }
 
     /**
-     * Compute the current streak (consecutive days ending today or yesterday)
-     * from a sorted list of completion dates. Delegates to [StreakUtils].
+     * Compute the current streak from the completion history.
      */
-    private fun computeCurrentStreak(lastCompleted: LocalDate?, history: List<LocalDate>): Int =
-        com.fracorbas.motivationapp.data.model.StreakUtils.currentStreak(history)
+    private fun computeCurrentStreak(history: List<LocalDate>): Int =
+        StreakUtils.currentStreak(history)
 
     /**
      * Search habits by query
@@ -172,32 +164,36 @@ class HabitRepository @Inject constructor(
             val frequency = habit.notificationFrequency ?: 1
             val unit = habit.notificationFrequencyUnit ?: "days"
             
+            // The streak is broken only when the user has missed a full frequency
+            // period. Use > (not >=) so a daily habit completed yesterday is still
+            // considered "live" — the user still has today to continue the chain.
             val shouldReset = when (unit) {
                 "days" -> {
                     val daysSince = java.time.temporal.ChronoUnit.DAYS.between(lastCompleted, today)
-                    daysSince >= frequency
+                    daysSince > frequency
                 }
                 "weeks" -> {
                     val daysSince = java.time.temporal.ChronoUnit.DAYS.between(lastCompleted, today)
-                    daysSince >= frequency * 7L
+                    daysSince > frequency * 7L
                 }
                 "months" -> {
                     val lastMonthStart = lastCompleted.withDayOfMonth(1)
                     val currentMonthStart = today.withDayOfMonth(1)
                     val monthsBetween = java.time.temporal.ChronoUnit.MONTHS.between(lastMonthStart, currentMonthStart)
-                    monthsBetween >= frequency
+                    monthsBetween > frequency
                 }
                 else -> true // Default to daily reset
             }
-            
+
             if (shouldReset) {
-                // Reset the habit
-                habitDao.updateHabit(
-                    habit.copy(
-                        lastCompletedDate = null,
-                        streak = 0
-                    )
-                )
+                // Recompute the streak from the completion history (source of truth)
+                // rather than blindly zeroing it. lastCompletedDate is preserved
+                // because it records the actual last completion date.
+                val history = completionDao.getAllCompletionsForHabit(habit.id)
+                val newStreak = StreakUtils.currentStreak(history)
+                if (newStreak != habit.streak) {
+                    habitDao.updateHabit(habit.copy(streak = newStreak))
+                }
             }
         }
     }
@@ -247,7 +243,6 @@ class HabitRepository @Inject constructor(
      * Total completions across all habits within [start, end] (inclusive).
      */
     suspend fun getHabitCompletionCountAllHabits(
-        habits: List<Habit>,
         start: LocalDate,
         end: LocalDate
     ): Int = getCompletionCountsByDate(start, end).values.sum()

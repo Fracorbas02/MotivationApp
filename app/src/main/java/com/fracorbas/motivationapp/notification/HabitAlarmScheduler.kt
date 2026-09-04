@@ -49,10 +49,9 @@ class HabitAlarmScheduler @Inject constructor(
             set(Calendar.MILLISECOND, 0)
         }
 
-        // If the time has already passed today, schedule for the next occurrence based on frequency
         val triggerTime = calculateNextTriggerTime(calendar, frequency, frequencyUnit)
 
-        createAlarm(habitId, title, trigger, triggerTime, frequency, frequencyUnit)
+        createAlarm(habitId, title, trigger, triggerTime, frequency, frequencyUnit, reminderTime)
     }
 
     /**
@@ -64,28 +63,19 @@ class HabitAlarmScheduler @Inject constructor(
         frequencyUnit: String?
     ): Long {
         val now = System.currentTimeMillis()
-        
+
         if (calendar.timeInMillis > now) {
-            // Time hasn't passed yet, use it as is
             return calendar.timeInMillis
         }
-        
+
         // Time has passed, schedule for next occurrence
+        val freq = frequency ?: 1
         when (frequencyUnit) {
-            "weeks" -> {
-                val frequencyValue = frequency ?: 1
-                calendar.add(Calendar.WEEK_OF_YEAR, frequencyValue)
-            }
-            "months" -> {
-                val frequencyValue = frequency ?: 1
-                calendar.add(Calendar.MONTH, frequencyValue)
-            }
-            else -> {
-                // Default to days (or daily if frequency is null/1)
-                calendar.add(Calendar.DAY_OF_YEAR, 1)
-            }
+            "weeks" -> calendar.add(Calendar.WEEK_OF_YEAR, freq)
+            "months" -> calendar.add(Calendar.MONTH, freq)
+            else -> calendar.add(Calendar.DAY_OF_YEAR, freq)
         }
-        
+
         return calendar.timeInMillis
     }
 
@@ -113,7 +103,9 @@ class HabitAlarmScheduler @Inject constructor(
                     habitId = habit.id,
                     title = habit.title,
                     trigger = habit.trigger,
-                    reminderTime = habit.reminderTime!!
+                    reminderTime = habit.reminderTime!!,
+                    frequency = habit.notificationFrequency,
+                    frequencyUnit = habit.notificationFrequencyUnit
                 )
             }
     }
@@ -141,7 +133,12 @@ class HabitAlarmScheduler @Inject constructor(
      */
     fun isAlarmScheduled(habitId: Int): Boolean {
         val intent = createAlarmIntent(habitId, "", "")
-        return getPendingIntent(habitId, intent) != null
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        } else {
+            PendingIntent.FLAG_NO_CREATE
+        }
+        return PendingIntent.getBroadcast(context, habitId, intent, flags) != null
     }
 
     // ========== Private helpers ==========
@@ -151,7 +148,8 @@ class HabitAlarmScheduler @Inject constructor(
         title: String,
         trigger: String,
         frequency: Int? = null,
-        frequencyUnit: String? = null
+        frequencyUnit: String? = null,
+        reminderTime: LocalTime? = null
     ): Intent {
         return Intent(context, HabitReminderReceiver::class.java).apply {
             putExtra(HabitReminderReceiver.EXTRA_HABIT_ID, habitId)
@@ -159,6 +157,10 @@ class HabitAlarmScheduler @Inject constructor(
             putExtra(HabitReminderReceiver.EXTRA_HABIT_TRIGGER, trigger)
             putExtra(HabitReminderReceiver.EXTRA_HABIT_FREQUENCY, frequency)
             putExtra(HabitReminderReceiver.EXTRA_HABIT_FREQUENCY_UNIT, frequencyUnit)
+            if (reminderTime != null) {
+                putExtra(HabitReminderReceiver.EXTRA_REMINDER_HOUR, reminderTime.hour)
+                putExtra(HabitReminderReceiver.EXTRA_REMINDER_MINUTE, reminderTime.minute)
+            }
         }
     }
 
@@ -185,9 +187,10 @@ class HabitAlarmScheduler @Inject constructor(
         trigger: String,
         triggerTime: Long,
         frequency: Int? = null,
-        frequencyUnit: String? = null
+        frequencyUnit: String? = null,
+        reminderTime: LocalTime? = null
     ) {
-        val intent = createAlarmIntent(habitId, title, trigger, frequency, frequencyUnit)
+        val intent = createAlarmIntent(habitId, title, trigger, frequency, frequencyUnit, reminderTime)
         val pendingIntent = getPendingIntent(habitId, intent) ?: return
         
         // Use setExactAndAllowWhileIdle for precise alarms that work even in Doze mode

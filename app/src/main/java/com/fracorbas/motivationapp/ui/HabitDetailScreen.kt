@@ -1,5 +1,6 @@
 package com.fracorbas.motivationapp.ui
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -183,7 +184,13 @@ fun HabitDetailScreen(
                         )
                     }
                     val freq = h.notificationFrequency?.let { f ->
-                        "${h.notificationFrequencyUnit ?: "days"} × $f"
+                        val unitDisplay = when (h.notificationFrequencyUnit) {
+                            "days", "DAILY" -> "jour(s)"
+                            "weeks", "WEEKLY" -> "semaine(s)"
+                            "months", "MONTHLY" -> "mois"
+                            else -> "jour(s)"
+                        }
+                        "Tous les $f $unitDisplay"
                     } ?: "Quotidienne"
                     AttributeRow(Icons.Default.CalendarMonth, "Fréquence", freq)
                 }
@@ -358,8 +365,11 @@ private fun CompletionCalendar(
                                     .clip(CircleShape)
                                     .background(container)
                                     .then(
-                                        if (isToday && !completed) Modifier
-                                        else Modifier
+                                        if (isToday && !completed) Modifier.border(
+                                            2.dp,
+                                            MaterialTheme.colorScheme.primary,
+                                            CircleShape
+                                        ) else Modifier
                                     ),
                                 contentAlignment = Alignment.Center
                             ) {

@@ -11,6 +11,7 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -115,7 +116,7 @@ fun MotivationAppTheme(
 /** Theme-aware success color, used for completed states and streaks. */
 @Composable
 fun successColor(): Color =
-    if (isSystemInDarkTheme()) SuccessDark else Success
+    if (MaterialTheme.colorScheme.surface.luminance() < 0.5f) SuccessDark else Success
 
 /** Theme-aware success color honoring an explicit theme mode (for previews). */
 @Composable

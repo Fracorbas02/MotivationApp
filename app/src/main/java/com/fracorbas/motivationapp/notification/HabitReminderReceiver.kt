@@ -28,30 +28,33 @@ class HabitReminderReceiver : BroadcastReceiver() {
         val trigger = intent.getStringExtra(EXTRA_HABIT_TRIGGER) ?: ""
         val frequency = intent.getIntExtra(EXTRA_HABIT_FREQUENCY, 1)
         val frequencyUnit = intent.getStringExtra(EXTRA_HABIT_FREQUENCY_UNIT) ?: "days"
-        
+        val reminderHour = intent.getIntExtra(EXTRA_REMINDER_HOUR, -1)
+        val reminderMinute = intent.getIntExtra(EXTRA_REMINDER_MINUTE, -1)
+
         if (habitId == -1) return
-        
+
         showNotification(context, habitId, title, trigger)
-        
-        // Reschedule the alarm for the next occurrence if frequency > 1
-        if (frequency > 1 || frequencyUnit != "days") {
-            rescheduleAlarm(context, habitId, title, trigger, frequency, frequencyUnit)
-        }
+
+        // Always reschedule for the next occurrence
+        rescheduleAlarm(context, habitId, title, trigger, frequency, frequencyUnit, reminderHour, reminderMinute)
     }
 
-    /**
-     * Reschedule the alarm for the next occurrence based on frequency
-     */
     private fun rescheduleAlarm(
         context: Context,
         habitId: Int,
         title: String,
         trigger: String,
         frequency: Int,
-        frequencyUnit: String
+        frequencyUnit: String,
+        reminderHour: Int,
+        reminderMinute: Int
     ) {
         val scheduler = HabitAlarmScheduler(context)
-        val reminderTime = java.time.LocalTime.now() // Use current time as reference
+        val reminderTime = if (reminderHour >= 0 && reminderMinute >= 0) {
+            java.time.LocalTime.of(reminderHour, reminderMinute)
+        } else {
+            java.time.LocalTime.now()
+        }
         scheduler.scheduleHabitReminder(
             habitId = habitId,
             title = title,
@@ -137,5 +140,7 @@ class HabitReminderReceiver : BroadcastReceiver() {
         const val EXTRA_HABIT_TRIGGER = "extra_habit_trigger"
         const val EXTRA_HABIT_FREQUENCY = "extra_habit_frequency"
         const val EXTRA_HABIT_FREQUENCY_UNIT = "extra_habit_frequency_unit"
+        const val EXTRA_REMINDER_HOUR = "extra_reminder_hour"
+        const val EXTRA_REMINDER_MINUTE = "extra_reminder_minute"
     }
 }

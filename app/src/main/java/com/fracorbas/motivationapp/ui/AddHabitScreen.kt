@@ -327,8 +327,9 @@ fun AddHabitScreen(
                             triggerId = selectedTrigger?.id,
                             reminderTime = reminderTime,
                             notificationEnabled = notificationEnabled,
+                            isActive = isActive,
                             notificationFrequency = notificationFrequency,
-                            notificationFrequencyUnit = notificationFrequencyUnit?.name
+                            notificationFrequencyUnit = notificationFrequencyUnit?.storageKey
                         )
                     } else {
                         habitViewModel.updateHabit(
@@ -341,7 +342,7 @@ fun AddHabitScreen(
                             notificationEnabled = notificationEnabled,
                             isActive = isActive,
                             notificationFrequency = notificationFrequency,
-                            notificationFrequencyUnit = notificationFrequencyUnit?.name
+                            notificationFrequencyUnit = notificationFrequencyUnit?.storageKey
                         )
                     }
                 },

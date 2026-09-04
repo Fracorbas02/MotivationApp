@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fracorbas.motivationapp.data.model.Habit
 import com.fracorbas.motivationapp.data.model.HabitCompletion
+import com.fracorbas.motivationapp.data.model.StreakUtils
 import com.fracorbas.motivationapp.data.repository.HabitRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -126,7 +127,10 @@ class StatisticsViewModel @Inject constructor(
         val weekCompletions = comps.count { it.completedDate in weekStart..today }
         val monthCompletions = comps.count { it.completedDate in monthStart..today }
         val yearCompletions = comps.count { it.completedDate in yearStart..today }
-        val longestStreak = habits.maxOfOrNull { it.streak } ?: 0
+        val longestStreak = habits.mapNotNull { habit ->
+            val history = comps.filter { it.habitId == habit.id }.map { it.completedDate }.sorted()
+            if (history.isEmpty()) 0 else StreakUtils.longestStreak(history)
+        }.maxOrNull() ?: 0
 
         return StatisticsSummary(
             todayCompletions = todayCompletions,
