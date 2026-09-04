@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
  */
 @Database(
     entities = [Habit::class, Trigger::class, HabitCompletion::class, Achievement::class],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(LocalDateConverter::class, LocalTimeConverter::class)
@@ -39,7 +39,7 @@ abstract class HabitDatabase : RoomDatabase() {
         private var INSTANCE: HabitDatabase? = null
 
         /** Migrations, exposed for instrumented tests. */
-        internal val ALL_MIGRATIONS: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        internal val ALL_MIGRATIONS: Array<Migration> get() = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 
         private val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(database: SupportSQLiteDatabase) {
@@ -108,6 +108,13 @@ abstract class HabitDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE habits ADD COLUMN targetDayOfWeek INTEGER")
+                database.execSQL("ALTER TABLE habits ADD COLUMN targetDayOfMonth INTEGER")
+            }
+        }
+
         fun getDatabase(context: Context): HabitDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = androidx.room.Room.databaseBuilder(
@@ -115,7 +122,7 @@ abstract class HabitDatabase : RoomDatabase() {
                     HabitDatabase::class.java,
                     "motivation_app_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)

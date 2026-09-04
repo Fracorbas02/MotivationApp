@@ -40,7 +40,9 @@ class HabitAlarmScheduler @Inject constructor(
         trigger: String,
         reminderTime: LocalTime,
         frequency: Int? = null,
-        frequencyUnit: String? = null
+        frequencyUnit: String? = null,
+        targetDayOfWeek: Int? = null,
+        targetDayOfMonth: Int? = null
     ) {
         val calendar = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, reminderTime.hour)
@@ -49,20 +51,45 @@ class HabitAlarmScheduler @Inject constructor(
             set(Calendar.MILLISECOND, 0)
         }
 
-        val triggerTime = calculateNextTriggerTime(calendar, frequency, frequencyUnit)
+        val triggerTime = calculateNextTriggerTime(calendar, frequency, frequencyUnit, targetDayOfWeek, targetDayOfMonth)
 
         createAlarm(habitId, title, trigger, triggerTime, frequency, frequencyUnit, reminderTime)
     }
 
     /**
-     * Calculate the next trigger time based on frequency settings
+     * Calculate the next trigger time based on frequency settings and optional target day.
      */
     private fun calculateNextTriggerTime(
         calendar: Calendar,
         frequency: Int?,
-        frequencyUnit: String?
+        frequencyUnit: String?,
+        targetDayOfWeek: Int? = null,
+        targetDayOfMonth: Int? = null
     ): Long {
         val now = System.currentTimeMillis()
+
+        // If target day is set, adjust the calendar to the next matching day
+        if (targetDayOfWeek != null && frequencyUnit == "weeks") {
+            val javaCalDayOfWeek = when (targetDayOfWeek) {
+                1 -> Calendar.MONDAY
+                2 -> Calendar.TUESDAY
+                3 -> Calendar.WEDNESDAY
+                4 -> Calendar.THURSDAY
+                5 -> Calendar.FRIDAY
+                6 -> Calendar.SATURDAY
+                7 -> Calendar.SUNDAY
+                else -> Calendar.MONDAY
+            }
+            val diff = (javaCalDayOfWeek - calendar.get(Calendar.DAY_OF_WEEK) + 7) % 7
+            calendar.add(Calendar.DAY_OF_MONTH, diff)
+        } else if (targetDayOfMonth != null && frequencyUnit == "months") {
+            val maxDay = calendar.getActualMaximum(Calendar.DAY_OF_MONTH)
+            val day = targetDayOfMonth.coerceAtMost(maxDay)
+            if (calendar.get(Calendar.DAY_OF_MONTH) > day) {
+                calendar.add(Calendar.MONTH, 1)
+            }
+            calendar.set(Calendar.DAY_OF_MONTH, day)
+        }
 
         if (calendar.timeInMillis > now) {
             return calendar.timeInMillis
@@ -105,7 +132,9 @@ class HabitAlarmScheduler @Inject constructor(
                     trigger = habit.trigger,
                     reminderTime = habit.reminderTime!!,
                     frequency = habit.notificationFrequency,
-                    frequencyUnit = habit.notificationFrequencyUnit
+                    frequencyUnit = habit.notificationFrequencyUnit,
+                    targetDayOfWeek = habit.targetDayOfWeek,
+                    targetDayOfMonth = habit.targetDayOfMonth
                 )
             }
     }

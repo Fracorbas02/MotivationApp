@@ -90,6 +90,9 @@ fun AddHabitScreen(
     var notificationFrequency by remember { mutableStateOf<Int?>(null) }
     var notificationFrequencyUnit by remember { mutableStateOf<NotificationFrequencyUnit?>(null) }
     var showFrequencyDropdown by remember { mutableStateOf(false) }
+    var targetDayOfWeek by remember { mutableStateOf<Int?>(null) }
+    var targetDayOfMonth by remember { mutableStateOf<Int?>(null) }
+    var showDayOfWeekDropdown by remember { mutableStateOf(false) }
 
     val allTriggers by triggerViewModel.allTriggers.collectAsState()
 
@@ -105,6 +108,8 @@ fun AddHabitScreen(
             habit.triggerId?.let { selectedTrigger = triggerViewModel.getTriggerById(it) }
             notificationFrequency = habit.notificationFrequency
             notificationFrequencyUnit = habit.notificationFrequencyUnit?.let { NotificationFrequencyUnit.fromString(it) }
+            targetDayOfWeek = habit.targetDayOfWeek
+            targetDayOfMonth = habit.targetDayOfMonth
         }
     }
 
@@ -305,6 +310,58 @@ fun AddHabitScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+
+                    // Day-of-week picker for weekly habits
+                    if (notificationFrequencyUnit == NotificationFrequencyUnit.WEEKLY) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        ExposedDropdownMenuBox(
+                            expanded = showDayOfWeekDropdown,
+                            onExpandedChange = { showDayOfWeekDropdown = !showDayOfWeekDropdown },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            OutlinedTextField(
+                                value = targetDayOfWeek?.let { dayName(it) } ?: "Tous les jours",
+                                onValueChange = {},
+                                readOnly = true,
+                                label = { Text("Jour de la semaine") },
+                                trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = "Ouvrir") },
+                                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                shape = fieldShape,
+                                colors = fieldColors
+                            )
+                            ExposedDropdownMenu(
+                                expanded = showDayOfWeekDropdown,
+                                onDismissRequest = { showDayOfWeekDropdown = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Tous les jours") },
+                                    onClick = { targetDayOfWeek = null; showDayOfWeekDropdown = false }
+                                )
+                                java.time.DayOfWeek.values().forEach { dow ->
+                                    DropdownMenuItem(
+                                        text = { Text(dow.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.FRENCH).replaceFirstChar { it.titlecase() }) },
+                                        onClick = { targetDayOfWeek = dow.value; showDayOfWeekDropdown = false }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Day-of-month picker for monthly habits
+                    if (notificationFrequencyUnit == NotificationFrequencyUnit.MONTHLY) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = targetDayOfMonth?.toString() ?: "",
+                            onValueChange = { targetDayOfMonth = it.toIntOrNull()?.coerceIn(1, 31) },
+                            label = { Text("Jour du mois (1-31, vide = tous)") },
+                            placeholder = { Text("Ex : 15") },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = fieldShape,
+                            colors = fieldColors,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
+                        )
+                    }
                 }
             }
 
@@ -329,7 +386,9 @@ fun AddHabitScreen(
                             notificationEnabled = notificationEnabled,
                             isActive = isActive,
                             notificationFrequency = notificationFrequency,
-                            notificationFrequencyUnit = notificationFrequencyUnit?.storageKey
+                            notificationFrequencyUnit = notificationFrequencyUnit?.storageKey,
+                            targetDayOfWeek = targetDayOfWeek,
+                            targetDayOfMonth = targetDayOfMonth
                         )
                     } else {
                         habitViewModel.updateHabit(
@@ -342,7 +401,9 @@ fun AddHabitScreen(
                             notificationEnabled = notificationEnabled,
                             isActive = isActive,
                             notificationFrequency = notificationFrequency,
-                            notificationFrequencyUnit = notificationFrequencyUnit?.storageKey
+                            notificationFrequencyUnit = notificationFrequencyUnit?.storageKey,
+                            targetDayOfWeek = targetDayOfWeek,
+                            targetDayOfMonth = targetDayOfMonth
                         )
                     }
                 },
@@ -403,6 +464,11 @@ private fun SettingRow(label: String, checked: Boolean, onCheckedChange: (Boolea
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
+
+private fun dayName(dayOfWeek: Int): String =
+    java.time.DayOfWeek.of(dayOfWeek)
+        .getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.FRENCH)
+        .replaceFirstChar { it.titlecase() }
 
 @Preview(showBackground = true)
 @Composable

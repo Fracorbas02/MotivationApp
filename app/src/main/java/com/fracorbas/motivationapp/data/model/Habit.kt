@@ -33,8 +33,10 @@ data class Habit(
     val streak: Int = 0,
     val lastCompletedDate: LocalDate? = null,
     val notificationEnabled: Boolean = false,
-    val notificationFrequency: Int? = null, // e.g., 1 for daily, 2 for every 2 days, 7 for weekly
-    val notificationFrequencyUnit: String? = null // "days", "weeks", "months"
+    val notificationFrequency: Int? = null,
+    val notificationFrequencyUnit: String? = null, // "days", "weeks", "months"
+    val targetDayOfWeek: Int? = null,  // 1-7 (Monday=1) for weekly habits, null = any day
+    val targetDayOfMonth: Int? = null   // 1-31 for monthly habits, null = any day
 )
 
 /**

@@ -153,42 +153,15 @@ class HabitRepository @Inject constructor(
     suspend fun resetHabitsForNewDay() {
         val today = java.time.LocalDate.now()
         val habits = habitDao.getAllHabitsList()
-        
+
         habits.forEach { habit ->
-            // Skip if already completed today or not active
-            if (habit.lastCompletedDate == today || !habit.isActive) {
-                return@forEach
-            }
-            
-            val lastCompleted = habit.lastCompletedDate ?: return@forEach
-            val frequency = habit.notificationFrequency ?: 1
-            val unit = habit.notificationFrequencyUnit ?: "days"
-            
-            // The streak is broken only when the user has missed a full frequency
-            // period. Use > (not >=) so a daily habit completed yesterday is still
-            // considered "live" — the user still has today to continue the chain.
-            val shouldReset = when (unit) {
-                "days" -> {
-                    val daysSince = java.time.temporal.ChronoUnit.DAYS.between(lastCompleted, today)
-                    daysSince > frequency
-                }
-                "weeks" -> {
-                    val daysSince = java.time.temporal.ChronoUnit.DAYS.between(lastCompleted, today)
-                    daysSince > frequency * 7L
-                }
-                "months" -> {
-                    val lastMonthStart = lastCompleted.withDayOfMonth(1)
-                    val currentMonthStart = today.withDayOfMonth(1)
-                    val monthsBetween = java.time.temporal.ChronoUnit.MONTHS.between(lastMonthStart, currentMonthStart)
-                    monthsBetween > frequency
-                }
-                else -> true // Default to daily reset
-            }
+            if (habit.lastCompletedDate == today || !habit.isActive) return@forEach
+            if (habit.lastCompletedDate == null) return@forEach
+
+            val shouldReset = com.fracorbas.motivationapp.data.model.HabitFrequencyUtils
+                .shouldResetHabitToday(habit)
 
             if (shouldReset) {
-                // Recompute the streak from the completion history (source of truth)
-                // rather than blindly zeroing it. lastCompletedDate is preserved
-                // because it records the actual last completion date.
                 val history = completionDao.getAllCompletionsForHabit(habit.id)
                 val newStreak = StreakUtils.currentStreak(history)
                 if (newStreak != habit.streak) {

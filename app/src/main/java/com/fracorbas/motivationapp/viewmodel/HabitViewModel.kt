@@ -149,7 +149,9 @@ class HabitViewModel @Inject constructor(
         notificationEnabled: Boolean,
         isActive: Boolean = true,
         notificationFrequency: Int? = null,
-        notificationFrequencyUnit: String? = null
+        notificationFrequencyUnit: String? = null,
+        targetDayOfWeek: Int? = null,
+        targetDayOfMonth: Int? = null
     ) = viewModelScope.launch {
         val habit = Habit(
             title = title,
@@ -160,7 +162,9 @@ class HabitViewModel @Inject constructor(
             notificationEnabled = notificationEnabled,
             isActive = isActive,
             notificationFrequency = notificationFrequency,
-            notificationFrequencyUnit = notificationFrequencyUnit
+            notificationFrequencyUnit = notificationFrequencyUnit,
+            targetDayOfWeek = targetDayOfWeek,
+            targetDayOfMonth = targetDayOfMonth
         )
         val habitId = repository.createHabit(habit)
         
@@ -172,10 +176,12 @@ class HabitViewModel @Inject constructor(
                 trigger = trigger,
                 reminderTime = reminderTime,
                 frequency = notificationFrequency,
-                frequencyUnit = notificationFrequencyUnit
+                frequencyUnit = notificationFrequencyUnit,
+                targetDayOfWeek = targetDayOfWeek,
+                targetDayOfMonth = targetDayOfMonth
             )
         }
-        
+
         _uiEvent.emit(UiEvent.ShowSnackbar("Habitude créée avec succès !"))
         _uiEvent.emit(UiEvent.NavigateBack)
     }
@@ -193,7 +199,9 @@ class HabitViewModel @Inject constructor(
         notificationEnabled: Boolean,
         isActive: Boolean,
         notificationFrequency: Int? = null,
-        notificationFrequencyUnit: String? = null
+        notificationFrequencyUnit: String? = null,
+        targetDayOfWeek: Int? = null,
+        targetDayOfMonth: Int? = null
     ) = viewModelScope.launch {
         val oldHabit = repository.getHabitById(id) ?: return@launch
         
@@ -218,7 +226,9 @@ class HabitViewModel @Inject constructor(
                     trigger = trigger,
                     reminderTime = reminderTime,
                     frequency = notificationFrequency,
-                    frequencyUnit = notificationFrequencyUnit
+                    frequencyUnit = notificationFrequencyUnit,
+                    targetDayOfWeek = targetDayOfWeek,
+                    targetDayOfMonth = targetDayOfMonth
                 )
             }
         }
@@ -233,7 +243,9 @@ class HabitViewModel @Inject constructor(
                 notificationEnabled = notificationEnabled,
                 isActive = isActive,
                 notificationFrequency = notificationFrequency,
-                notificationFrequencyUnit = notificationFrequencyUnit
+                notificationFrequencyUnit = notificationFrequencyUnit,
+                targetDayOfWeek = targetDayOfWeek,
+                targetDayOfMonth = targetDayOfMonth
             )
         )
         _uiEvent.emit(UiEvent.ShowSnackbar("Habitude mise à jour !"))
@@ -283,7 +295,9 @@ class HabitViewModel @Inject constructor(
                 trigger = habit.trigger,
                 reminderTime = habit.reminderTime!!,
                 frequency = habit.notificationFrequency,
-                frequencyUnit = habit.notificationFrequencyUnit
+                frequencyUnit = habit.notificationFrequencyUnit,
+                targetDayOfWeek = habit.targetDayOfWeek,
+                targetDayOfMonth = habit.targetDayOfMonth
             )
         } else if (!enabled && habit.reminderTime != null) {
             alarmScheduler.cancelHabitReminder(habitId)
