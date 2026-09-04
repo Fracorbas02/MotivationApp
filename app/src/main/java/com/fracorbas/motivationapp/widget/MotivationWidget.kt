@@ -13,6 +13,7 @@ import androidx.glance.background
 import androidx.glance.layout.Column
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.padding
+import androidx.glance.unit.ColorProvider
 import com.fracorbas.motivationapp.data.local.HabitDatabase
 import com.fracorbas.motivationapp.data.repository.SettingsRepository
 import com.fracorbas.motivationapp.data.repository.ThemeMode
@@ -32,19 +33,22 @@ import java.time.LocalDate
 class MotivationWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
-        val database = HabitDatabase.getDatabase(context)
-        val settingsRepo = SettingsRepository(context)
-        val settings = settingsRepo.settings.first()
-        val isDark = when (settings.themeMode) {
-            ThemeMode.SYSTEM -> android.content.res.Configuration.UI_MODE_NIGHT_YES ==
-                (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK)
-            ThemeMode.DARK -> true
-            ThemeMode.LIGHT -> false
+        val isDark = try {
+            resolveIsDark(context)
+        } catch (e: Exception) {
+            // Fallback: follow system theme
+            val nightMode = context.resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
         }
 
         val today = LocalDate.now()
-        val habits = database.habitDao.getAllHabitsList()
-        val activeHabits = habits.filter { it.isActive }
+        val activeHabits = try {
+            val database = HabitDatabase.getDatabase(context)
+            database.habitDao.getAllHabitsList().filter { it.isActive }
+        } catch (e: Exception) {
+            emptyList()
+        }
         val completedToday = activeHabits.count { it.lastCompletedDate == today }
 
         val colors = if (isDark) WidgetColors.dark() else WidgetColors.light()
@@ -53,7 +57,7 @@ class MotivationWidget : GlanceAppWidget() {
             Column(
                 modifier = GlanceModifier
                     .fillMaxSize()
-                    .background(colors.surface)
+                    .background(ColorProvider(colors.surface))
                     .cornerRadius(20.dp)
                     .padding(12.dp)
             ) {
@@ -65,6 +69,26 @@ class MotivationWidget : GlanceAppWidget() {
                     colors = colors
                 )
             }
+        }
+    }
+
+    private suspend fun resolveIsDark(context: Context): Boolean {
+        return try {
+            val settingsRepo = SettingsRepository(context)
+            val settings = settingsRepo.settings.first()
+            when (settings.themeMode) {
+                ThemeMode.DARK -> true
+                ThemeMode.LIGHT -> false
+                ThemeMode.SYSTEM -> {
+                    val nightMode = context.resources.configuration.uiMode and
+                        android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                    nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                }
+            }
+        } catch (e: Exception) {
+            val nightMode = context.resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            nightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
         }
     }
 

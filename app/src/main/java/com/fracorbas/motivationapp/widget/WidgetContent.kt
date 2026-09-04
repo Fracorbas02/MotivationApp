@@ -73,7 +73,7 @@ fun WidgetContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isDone) "\u2713" else "\u25CB",
+                    text = if (isDone) "OK" else "--",
                     style = TextStyle(
                         fontWeight = FontWeight.Bold,
                         color = ColorProvider(if (isDone) colors.success else colors.onSurfaceVariant)
